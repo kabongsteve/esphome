@@ -1,0 +1,156 @@
+substitutions:
+  ssid: TooManyComp
+  ssid_pwd: BigBasement
+  mqtt_host: 192.168.12.46
+  mqtt_user: mqtt
+  mqtt_pwd: Bromell
+  duration: 2min
+  pause: 500ms
+
+esphome:
+  name: $devicename
+  platform: ESP32
+  board: esp32dev
+  
+wifi:
+  ssid: $ssid
+  password: $ssid_pwd
+  power_save_mode: light
+  ap:
+    ssid: $devicename
+    password: BigBasement
+
+captive_portal:
+  
+api:
+
+ota:
+
+web_server:
+  port: 80
+
+mqtt:
+  broker: $mqtt_host
+  username: $mqtt_user
+  password: $mqtt_pwd
+  discovery: false
+  
+logger:
+   baud_rate: 0
+
+# remove # below to enable ble tracking
+#esp32_ble_tracker:
+
+uart:
+  rx_pin: RX
+  baud_rate: 4800
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal $devicename"
+    update_interval: 600s
+  # - platform: cse7766  #The actual chip on the DualR3 is a CSE7761, no driver available yet!
+  #   update_interval: 5s
+  #   current:
+  #     name: "Current"
+  #   voltage:
+  #     name: "Voltage"
+  #   power:
+  #     name: "Power"
+  #     id: power
+  
+output:
+
+switch:
+  - platform: gpio
+    pin: GPIO27
+    id: relayUp
+    interlock: &interlock_group [relayUp, relayDown]
+    interlock_wait_time: $pause
+  - platform: gpio
+    pin: GPIO14
+    id: relayDown
+    interlock: *interlock_group
+    interlock_wait_time: $pause
+  - platform: template
+    name: Up
+    lambda: |-
+      if (id(relayUp).state) {
+        return true;
+      } else {
+        return false;
+      }
+    turn_on_action:
+      - switch.turn_on: relayUp
+    turn_off_action:
+      - switch.turn_off: relayUp
+  - platform: template
+    name: Down
+    lambda: |-
+      if (id(relayDown).state) {
+        return true;
+      } else {
+        return false;
+      }
+    turn_on_action:
+      - switch.turn_on: relayDown
+    turn_off_action:
+      - switch.turn_off: relayDown
+  
+status_led:
+  pin:
+    number: GPIO13
+    inverted: yes
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO0
+      inverted: True
+    name: "GPIO0"
+    on_press:
+      - cover.toggle: shutter
+  - platform: gpio
+    pin:
+      number: GPIO32
+      mode: INPUT_PULLUP
+      inverted: True
+      id: upswitch
+    name: "Up Switch"
+    on_press:
+      - logger.log: "press Up"
+      - cover.open: shutter
+    on_release:
+      - logger.log: "Release Up"
+      - cover.stop: shutter
+  - platform: gpio
+    id: downswitch
+    pin:
+      number: GPIO33
+      mode: INPUT_PULLUP
+      inverted: True
+    name: "Down Switch"
+    on_press:
+      - logger.log: "press Down"
+      - cover.close: shutter
+    on_release:
+      - logger.log: "release Down"
+      - cover.stop: shutter
+  
+cover:
+  - platform: time_based
+    device_class: shade
+    name: Shuttter
+    id: shutter
+    open_action:
+      - switch.turn_on: relayUp
+    open_duration: $duration
+
+    close_action:
+      - switch.turn_on: relayDown
+    close_duration: $duration
+
+    stop_action:
+      - switch.turn_off: relayUp
+      - switch.turn_off: relayDown
+

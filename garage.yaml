@@ -1,0 +1,143 @@
+substitutions:
+  ssid: TooManyComp
+  ssid_pwd: BigBasement
+  delay_time: 3min
+  retry_time: 30s
+  interval_time: 7min
+  mqtt_host: 192.168.12.46
+  mqtt_user: mqtt
+  mqtt_pwd: Bromell
+
+esphome:
+  name: $devicename
+  platform: ESP8266
+  board: esp8285
+  on_boot:
+    then:
+      - script.execute: auto_close
+
+ota:
+  password: ""
+
+wifi:
+  ssid: $ssid
+  password: $ssid_pwd
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: $devicename
+    password: $ssid_pwd
+
+captive_portal:
+
+logger:
+  level: none
+  baud_rate: 0
+
+globals:
+  - id: auto_close_enabled
+    type: bool
+    restore_value: no
+    initial_value: 'true'
+        
+switch:
+  - platform: gpio
+    id: relay
+    pin: 
+      number: 13
+      inverted: false
+    on_turn_on:
+    - delay: 250ms
+    - switch.turn_off: relay
+  
+binary_sensor:
+  - platform: gpio
+    id: button
+    pin: 
+      number: GPIO0
+      inverted: true
+    on_press:
+      - switch.turn_on: relay
+      - globals.set: 
+          id: auto_close_enabled
+          value: 'false'
+      - logger.log: "Set Auto Close Off"
+  - platform: gpio
+    pin: 
+      number: GPIO12
+      inverted: true
+    internal: true
+    id: sensor
+    on_release:
+      then:
+        - script.execute: auto_close
+    on_press:
+      - script.stop: auto_close
+      - globals.set: 
+          id: auto_close_enabled
+          value: 'true'
+
+script:
+  - id: auto_close
+    then:
+      - if:
+          condition:
+            - lambda: "return id(auto_close_enabled) == true;"
+          then:
+            - delay: $delay_time
+            - logger.log: "Auto Close Close Door"
+            - cover.close: door
+            - wait_until:
+                condition:
+                  binary_sensor.is_on: sensor
+                timeout: $retry_time
+            - cover.close: door
+
+interval:
+  - interval: $interval_time
+    then:
+      - if:
+          condition:
+            - lambda: "return id(auto_close_enabled) == true;"
+            - not:
+                - script.is_running: auto_close
+          then:
+            - logger.log: "Interval"
+            - cover.close: door
+
+cover:
+  - platform: template
+    device_class: garage
+    id: door
+    name: Door
+    lambda: |-
+      if (id(sensor).state) {
+        return COVER_CLOSED;
+      } else {
+        return COVER_OPEN;
+      }
+    open_action:
+      if:
+        condition:
+          binary_sensor.is_on: sensor
+        then:
+          switch.turn_on: relay
+    close_action:
+      if:
+        condition:
+          binary_sensor.is_off: sensor
+        then:
+          switch.turn_on: relay
+    stop_action:
+      switch.turn_on: relay
+
+
+mqtt:
+  broker: $mqtt_host
+  username: $mqtt_user
+  password: $mqtt_pwd
+  discovery: false
+
+web_server:
+  port: 80
+  include_internal: true

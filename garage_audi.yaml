@@ -1,0 +1,130 @@
+substitutions:
+  device_name: garageaudi
+  ssid: TooManyComp
+  ssid_pwd: BigBasement
+  delay_time: 3min
+  retry_time: 30s
+  mqtt_host: 192.168.12.46
+  mqtt_user: mqtt
+  mqtt_pwd: Bromell
+
+esphome:
+  name: $device_name
+  platform: ESP8266
+  board: esp8285
+  on_boot:
+    then:
+      - switch.turn_on: autoclose
+
+ota:
+  password: ""
+
+wifi:
+  ssid: $ssid
+  password: $ssid_pwd
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: $devicename
+    password: $ssid_pwd
+
+captive_portal:
+
+
+switch:
+  - platform: gpio
+    id: relay
+    pin: 
+      number: 13
+      inverted: true
+    on_turn_on:
+    - delay: 250ms
+    - switch.turn_off: relay
+  - platform: template
+    id: autoclose
+    name: Auto Close
+    optimistic: true
+    restore_state: true
+    on_turn_on:
+      while:
+        condition:
+          and:
+            - binary_sensor.is_off: sensor
+            - switch.is_on: autoclose
+        then:
+          - switch.turn_on: relay
+          - wait_until:
+              condition:
+                binary_sensor.is_on: sensor
+              timeout: $retry_time
+
+binary_sensor:
+  - platform: gpio
+    id: button
+    pin: 
+      number: 0
+    on_click:
+    - switch.turn_on: relay
+    on_double_click:
+    - switch.toggle: autoclose
+  - platform: gpio
+    pin: 
+      number: 12
+      inverted: true
+    internal: true
+    id: sensor
+    on_release:
+      then:
+        - if:
+            condition:
+              switch.is_on: autoclose
+            then:
+            - delay: $delay_time
+            - while:
+                condition:
+                  and:
+                    - binary_sensor.is_off: sensor
+                    - switch.is_on: autoclose
+                then:
+                  - switch.turn_on: relay
+                  - wait_until:
+                      condition:
+                        binary_sensor.is_on: sensor
+                      timeout: $retry_time
+                  
+
+cover:
+  - platform: template
+    device_class: garage
+    id: door
+    name: Door
+    lambda: |-
+      if (id(sensor).state) {
+        return COVER_CLOSED;
+      } else {
+        return COVER_OPEN;
+      }
+    open_action:
+      if:
+        condition:
+          binary_sensor.is_on: sensor
+        then:
+          switch.turn_on: relay
+    close_action:
+      if:
+        condition:
+          binary_sensor.is_off: sensor
+        then:
+          switch.turn_on: relay
+    stop_action:
+      switch.turn_on: relay
+
+
+mqtt:
+  broker: $mqtt_host
+  username: $mqtt_user
+  password: $mqtt_pwd
+  discovery: false
+
+web_server:
+  port: 80
