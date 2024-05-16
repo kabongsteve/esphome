@@ -1,0 +1,188 @@
+substitutions:
+  name: "lift"
+  friendly_name: Lift
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: false
+  project:
+    name: esphome.web
+    version: '1.0'
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+    version: recommended
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+# Allow Over-The-Air updates
+ota:
+
+wifi:
+  # Set up a wifi access point
+  ap: {}
+
+# In combination with the `ap` this allows the user
+# to provision wifi credentials to the device via WiFi AP.
+captive_portal:
+
+dashboard_import:
+  package_import_url: github://esphome/example-configs/esphome-web/esp32.yaml@main
+  import_full_config: true
+
+web_server:
+
+globals:
+  - id: last_ble
+    type: uint16_t
+    restore_value: no
+
+# LED exposed as binary light
+output:
+  - platform: gpio
+    pin: GPIO23
+    id: output_led
+
+light:
+  - platform: binary
+    id: light_led
+    name: LED
+    output: output_led
+
+binary_sensor:
+  - platform: gpio
+    pin: 
+      number: GPIO18
+      mode: 
+        input: true
+        pullup: true
+      inverted: true
+    name: "ButtonUp"
+    filters:
+      - delayed_on: 10ms
+      - delayed_off: 10ms
+    on_press:
+      then:
+        - cover.open: lift_cover
+    on_release:
+      then:
+        - cover.stop: lift_cover
+  
+  - platform: gpio
+    pin: 
+      number: GPIO22
+      mode: 
+        input: true
+        pullup: true
+      inverted: true
+    name: "ButtonDown"
+    filters:
+      - delayed_on: 10ms
+      - delayed_off: 10ms
+    on_press:
+      then:
+        - cover.close: lift_cover
+    on_release:
+      then:
+        - cover.stop: lift_cover
+
+  - platform: gpio
+    pin: 
+      number: GPIO12
+      mode: 
+        input: true
+        pullup: true
+      inverted: true
+    name: "EndStopDown"
+    filters:
+      - delayed_on: 10ms
+
+  - platform: gpio
+    pin: 
+      number: GPIO27
+      mode: 
+        input: true
+        pullup: true
+      inverted: true
+    name: "EndStopUp"
+    filters:
+      - delayed_on: 10ms
+
+# Relays exposed as switches
+switch:
+  - platform: gpio
+    pin: GPIO16
+    id: relay_1
+    name: Relay 1
+    interlock: &relays [relay_1, relay_2]
+    interlock_wait_time: 2s
+
+  - platform: gpio
+    pin: GPIO17
+    id: relay_2
+    name: Relay 2
+    interlock: *relays
+    interlock_wait_time: 2s
+
+cover:
+  - platform: time_based
+    id: lift_cover
+    name: "Lift"
+    open_action:
+      - switch.turn_on: relay_1
+    open_duration: 20sec
+
+    close_action:
+      - switch.turn_on: relay_2
+    close_duration: 20sec
+
+    stop_action:
+      - switch.turn_off: relay_1
+      - switch.turn_off: relay_2
+    
+    assumed_state: true
+
+
+esp32_ble_tracker:
+  scan_parameters:
+    active: false
+    continuous: true
+  on_ble_manufacturer_data_advertise:
+    - mac_address: C1:A2:A3:A4:A5:A6
+      manufacturer_id: 004E
+      then:
+        - lambda: |-
+            uint16_t nxt = (x[5] << 8) + x[4];
+            if (id(last_ble) != nxt)
+            {
+              auto call = id(lift_cover).make_call();
+              if (x[9] == 0x01)
+              {
+                if (id(lift_cover).current_operation == CoverOperation::COVER_OPERATION_IDLE)
+                  call.set_command_close();
+                else
+                  call.set_command_stop();
+                call.perform();
+              }
+              else
+              if (x[9] == 0x03)
+              {
+                if (id(lift_cover).current_operation == CoverOperation::COVER_OPERATION_IDLE)
+                  call.set_command_open();
+                else
+                  call.set_command_stop();
+                call.perform();
+              }
+              id(last_ble) = nxt;
+            }
+
+# [4,5] instance count
+# [9] button
+

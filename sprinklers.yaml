@@ -1,0 +1,444 @@
+substitutions:
+  name: "sprinklers"
+  friendly_name: Sprinklers
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: false
+  project:
+    name: esphome.web
+    version: '1.0'
+  on_boot:
+    - priority: 700
+      then:
+        - switch.turn_off: enable_relays
+#    - priority: -100
+#      then:
+#        - switch.turn_off: enable_relays
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+time:
+  - platform: sntp
+    id: esptime
+    timezone: Australia/Canberra
+    servers:
+      - au.pool.ntp.org
+
+status_led:
+  pin: GPIO5
+
+globals:
+  - id: mode
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+select:
+  - platform: template
+    name: "Source"
+    id: source
+    options:
+      - "Hose"
+      - "Garden"
+      - "Front"
+      - "Back"
+      - "Hose (M)"
+      - "Garden (M)"
+      - "Front (M)"
+      - "Back (M)"
+    initial_option: "Hose"
+    optimistic: true
+  - platform: template
+    name: "Runtime"
+    id: runtime
+    options:
+      - "5"
+      - "10"
+      - "15"
+      - "20"
+      - "30"
+      - "45"
+      - "60"
+      - "90"
+      - "120"
+    initial_option: "15"
+    optimistic: true
+
+sensor:
+  - platform: rotary_encoder
+    id: controller
+    pin_a: 
+      number: GPIO25
+      mode: INPUT_PULLUP
+    pin_b: 
+      number: GPIO26
+      mode: INPUT_PULLUP
+    resolution: 1
+    restore_mode: RESTORE_DEFAULT_ZERO 
+    on_clockwise:
+      - if:
+          condition:
+            lambda: 'return id(sprinklers).active_valve().has_value();'
+          then:
+            - sprinkler.next_valve: sprinklers
+          else:
+            if:
+              condition:
+                lambda: 'return id(mode) == 0;'
+              then:
+                select.operation:
+                  id: source
+                  operation: next
+                  cycle: true
+              else:
+                if:
+                  condition:
+                    lambda: 'return id(mode) == 1;'
+                  then:
+                    select.operation:
+                      id: runtime
+                      operation: next
+                      cycle: true
+      - component.update: screen
+    on_anticlockwise:
+      - if:
+          condition:
+            lambda: 'return id(sprinklers).active_valve().has_value();'
+          then:
+            - sprinkler.previous_valve: sprinklers
+          else:
+            if:
+              condition:
+                lambda: 'return id(mode) == 0;'
+              then:
+                select.operation:
+                  id: source
+                  operation: previous
+                  cycle: true
+              else:
+                if:
+                  condition:
+                    lambda: 'return id(mode) == 1;'
+                  then:
+                    select.operation:
+                      id: runtime
+                      operation: previous
+                      cycle: true
+      - component.update: screen
+
+
+  - platform: ultrasonic
+    trigger_pin: GPIO16
+    echo_pin: GPIO17
+    id: tanklevel
+    update_interval: 2s
+    on_value:
+      - component.update: screen
+
+  - platform: template
+    id: volume
+    name: "TankLevel"
+    lambda: |-
+      auto depth = id(tanklevel).state;
+      if (isnan(depth))
+        return 0;
+      auto full = 20;
+      auto empty = 157;
+      auto unit = 22;
+      depth *= 100;
+      if (depth > empty)
+        depth = empty;
+      if (depth <= full)
+        depth = full;
+      depth = 100 - ((depth - full) * 100 / (empty - full));
+      return (int)(depth * unit / 10) * 10;
+
+
+text_sensor:
+  - platform: template
+    id: state
+    name: Sprinkler State
+    lambda: |-
+      std::string result("Idle");
+      if (id(sprinklers).active_valve().has_value()) {
+        auto active = id(sprinklers).active_valve().value();
+        auto remaining = id(sprinklers).time_remaining_active_valve().value();
+        auto name = id(sprinklers).valve_name(active);
+        char buf[80];
+        sprintf(buf, "%s: %d:%02d", name, remaining / 60, remaining % 60);
+        result = buf;
+      }
+      return result;
+        return { "Idle" };      
+    update_interval: 5s
+
+binary_sensor:
+  - platform: gpio
+    id: rotary_switch
+    pin: 
+      number: GPIO27
+      mode: INPUT_PULLUP
+      inverted: true
+    on_multi_click:
+    - timing:
+        - ON for at most 1s
+        - OFF for at most 1s
+        - ON for at most 1s
+        - OFF for at least 0.2s
+      then:
+        - sprinkler.start_single_valve: 
+            id: sprinklers
+            valve_number: 0
+            run_duration: 900s
+        - component.update: screen
+    - timing:
+        - ON for at most 1s
+        - OFF for at least 0.25s
+      then:
+        - if:
+            condition:
+              lambda: 'return id(sprinklers).active_valve().has_value();'
+            then:
+              - sprinkler.shutdown: sprinklers
+            else:
+              - if:
+                  condition: 
+                    lambda: 'return id(mode) == 1;'
+                  then:
+                    - sprinkler.start_single_valve:
+                        id: sprinklers
+                        valve_number: !lambda 'return id(source).active_index().value();'
+                        run_duration: !lambda 'return atoi(id(runtime).state.c_str()) * 60;'
+                  else:
+                    - globals.set:
+                        id: mode
+                        value: '1'
+        - component.update: screen
+    - timing:
+        - ON for at least 2s
+      then:
+        - sprinkler.shutdown: sprinklers
+        - component.update: screen
+
+
+sn74hc595:
+  - id: relays
+    data_pin: GPIO13
+    clock_pin: GPIO14
+    latch_pin: GPIO12
+
+button:
+  - platform: template
+    id: runOnce
+    name: "Run"
+    on_press: 
+      - sprinkler.start_single_valve: 
+          id: sprinklers
+          valve_number: !lambda 'return id(source).active_index().value();'
+          run_duration: !lambda 'return atoi(id(runtime).state.c_str()) * 60;'
+        
+
+switch:
+  - platform: gpio
+    id: enable_relays
+    pin: 
+      number: GPIO33
+    restore_mode: ALWAYS_ON
+  - platform: gpio
+    id: pump
+    pin:
+      sn74hc595: relays
+      number: 0
+      inverted: true
+    interlock: [mains]
+  - platform: gpio
+    id: mains
+    pin:
+      sn74hc595: relays
+      number: 1
+      inverted: true
+    interlock: [pump]
+  - platform: gpio
+    id: hose
+    pin:
+      sn74hc595: relays
+      number: 2
+      inverted: true
+  - platform: gpio
+    id: garden
+    pin:
+      sn74hc595: relays
+      number: 3
+      inverted: true
+  - platform: gpio
+    id: front
+    pin:
+      sn74hc595: relays
+      number: 4
+      inverted: true
+  - platform: gpio
+    id: fence
+    pin:
+      sn74hc595: relays
+      number: 5
+      inverted: true
+  - platform: gpio
+    id: back
+    pin:
+      sn74hc595: relays
+      number: 6
+      inverted: true
+  - platform: gpio
+    id: empty2
+    pin:
+      sn74hc595: relays
+      number: 7
+      inverted: true
+
+sprinkler:
+  - id: sprinklers
+    auto_advance_switch: false
+    main_switch: 
+      name: "Sprinklers"
+      id: main_switch
+      on_turn_off:
+        - select.set: 
+            id: source
+            option: 'Hose'
+        - globals.set: 
+            id: mode
+            value: '0'
+        - component.update: screen
+    valve_overlap: 1s
+    pump_start_valve_delay: 1s
+    valves:
+      - valve_switch: "Hose"
+        valve_switch_id: hose
+        pump_switch_id: pump
+        run_duration: 900s
+      - valve_switch: "Garden"
+        valve_switch_id: garden
+        pump_switch_id: pump
+        run_duration: 900s
+      - valve_switch: "Front"
+        valve_switch_id: front
+        pump_switch_id: pump
+        run_duration: 900s
+      - valve_switch: "Back"
+        valve_switch_id: back
+        pump_switch_id: pump
+        run_duration: 900s
+      - valve_switch: "Hose M"
+        valve_switch_id: hose
+        pump_switch_id: mains
+        run_duration: 900s
+      - valve_switch: "Garden M"
+        valve_switch_id: garden
+        pump_switch_id: mains
+        run_duration: 900s
+      - valve_switch: "Front M"
+        valve_switch_id: front
+        pump_switch_id: mains
+        run_duration: 900s
+      - valve_switch: "Back M"
+        valve_switch_id: back
+        pump_switch_id: mains
+        run_duration: 900s
+
+
+font:
+  - file: 
+      type: gfonts
+      family: "Roboto+Mono"
+      weight: 600
+    id: font24
+    size: 24
+
+  - file: "gfonts://Roboto+Mono"
+    id: font16
+    size: 12
+
+  - file: "gfonts://Roboto+Mono"
+    id: font10
+    size: 10
+
+spi:
+  clk_pin: GPIO18
+  mosi_pin: GPIO23
+  miso_pin: GPIO19
+
+display:
+  - platform: st7735
+    id: screen
+    model: "INITR_BLACKTAB"
+    reset_pin: GPIO15
+    cs_pin: GPIO2
+    dc_pin: GPIO22
+    rotation: 90
+    device_width: 128
+    device_height: 160
+    col_start: 0
+    row_start: 0
+    eight_bit_color: true
+    update_interval: 1s
+    lambda: |-
+      auto black = Color(0, 0, 0);
+      auto red = Color(255, 51, 51);
+      auto green = Color(0, 255, 0);
+      auto blue = Color(147, 194, 249);
+      auto white = Color(255, 255, 255);
+
+      auto level = id(volume).state;
+      auto rotary = id(controller).state;
+
+      it.strftime(160, 4, id(font16), TextAlign::TOP_RIGHT, "%A %I:%M", id(esptime).now());
+
+      it.filled_rectangle(1, 5, 24, 124, white);
+      it.filled_rectangle(2, 123 - level, 22, level, blue);
+      if (id(sprinklers).active_valve().has_value()) {
+        auto active = id(sprinklers).active_valve().value();
+        auto remaining = id(sprinklers).time_remaining_active_valve().value();
+        auto name = id(sprinklers).valve_name(active);
+        it.printf(95, 45, id(font24), green, TextAlign::CENTER, "%s", name);
+        it.printf(95, 75, id(font24), blue, TextAlign::CENTER, "%d:%02d", remaining / 60, remaining % 60);
+      }
+      else
+      if (id(mode)==0) {
+        it.printf(95, 45, id(font24), green, TextAlign::CENTER, "(%s)", id(source).state.c_str());
+      }
+      else {
+        it.printf(95, 45, id(font24), green, TextAlign::CENTER, "%s", id(source).state.c_str());
+        it.printf(95, 75, id(font24), blue, TextAlign::CENTER, "(%s)", id(runtime).state.c_str());
+      }
+      it.printf(30, 128, id(font16), TextAlign::BOTTOM_LEFT, "%dlt, %d%%", level, level / 22);
+
+# Enable logging
+logger:
+  level: DEBUG
+  logs:
+    component: ERROR
+
+# Enable Home Assistant API
+api:
+
+# Allow Over-The-Air updates
+ota:
+
+# Allow provisioning Wi-Fi via serial
+improv_serial:
+
+wifi:
+
+dashboard_import:
+  package_import_url: github://esphome/example-configs/esphome-web/esp32.yaml@main
+  import_full_config: true
+
+
+# To have a "next url" for improv serial
+web_server:
+

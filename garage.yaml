@@ -4,7 +4,7 @@ substitutions:
   delay_time: 3min
   retry_time: 30s
   interval_time: 7min
-  mqtt_host: 192.168.12.46
+  mqtt_host: homeassistant.local
   mqtt_user: mqtt
   mqtt_pwd: Bromell
 
@@ -16,8 +16,12 @@ esphome:
     then:
       - script.execute: auto_close
 
+api:
+  encryption:
+    key: "CJRgX+EyE3T54id7npiIQkyLujgnzj6gPZSlsKmMG2U="
+
 ota:
-  password: ""
+  password: "7b5a2ae627be3ada2cce531da9014daf"
 
 wifi:
   ssid: $ssid
