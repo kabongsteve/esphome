@@ -1,0 +1,93 @@
+﻿
+      // Outdoor
+      it.print(295, base_y + 100, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-tree-outline"].c_str());
+      it.print(355, base_y + 100, id(normal_font), "Outdoor:");
+      // Temperature
+      it.print(295, base_y + 150, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-thermometer"].c_str());
+      float temp = id(outdoor_temperature).state;
+      if (NOT_NAN(temp))
+        it.printf(355, base_y + 150, id(normal_font), "%.1f°C", temp);
+      else
+        it.print(355, base_y + 150, id(normal_font), "---");
+      // Humidity
+      it.print(295, base_y + 200, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-water-percent"].c_str());
+      float humidity = id(outdoor_humidity).state;
+      if (NOT_NAN(humidity))
+        it.printf(355, base_y + 200, id(normal_font), "%.1f%%", humidity);
+      else
+        it.print(355, base_y + 200, id(normal_font), "---");
+      // Rainfall
+      it.print(295, base_y + 250, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-weather-pouring"].c_str());
+      float rainfall = id(outdoor_rainfall).state;
+      if (NOT_NAN(rainfall))
+        it.printf(355, base_y + 250, id(normal_font), "%.1f mm", rainfall);
+      else
+        it.print(355, base_y + 250, id(normal_font), "---");
+      // Wind strength
+      it.print(295, base_y + 300, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-wind-power-outline"].c_str());
+      float wind_strength = id(outdoor_wind_strength).state;
+      if (NOT_NAN(wind_strength))
+        it.printf(355, base_y + 300, id(normal_font), "%d km/h", (int)wind_strength);
+      else
+        it.print(355, base_y + 300, id(normal_font), "---");
+
+      // Indoor
+      it.print(560, base_y + 100, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-home-outline"].c_str());
+      it.print(620, base_y + 100, id(normal_font), "Indoor:");
+      // Temperature
+      it.print(560, base_y + 150, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-thermometer"].c_str());
+      temp = id(indoor_temperature).state;
+      if (NOT_NAN(temp))
+        it.printf(620, base_y + 150, id(normal_font), "%.1f°C", temp);
+      else
+        it.print(620, base_y + 150, id(normal_font), "---");
+      // Humidity
+      it.print(560, base_y + 200, id(small_icons_font), weather_icon_color, id(material_icons_map)["mdi-water-percent"].c_str());
+      humidity = id(indoor_humidity).state;
+      if (NOT_NAN(humidity))
+        it.printf(620, base_y + 200, id(normal_font), "%.1f%%", humidity);
+      else
+        it.print(620, base_y + 200, id(normal_font), "---");
+
+
+  - platform: adc
+    disabled_by_default: true
+    pin: GPIO35
+    name: ${device_name} battery voltage
+    id: m5paper_battery_voltage
+    update_interval: 10s
+    attenuation: 11db
+    filters:
+      - multiply: 2 #1,27272727
+  - platform: homeassistant
+    name: Outdoor humidity
+    id: outdoor_humidity
+    entity_id: ${outdoor_humidity}
+  - platform: homeassistant
+    name: Rainfall last hour
+    id: outdoor_rainfall
+    entity_id: ${outdoor_rainfall}
+  - platform: homeassistant
+    name: Wind strength
+    id: outdoor_wind_strength
+    entity_id: ${outdoor_wind_strength}
+  - platform: homeassistant
+    name: Indoor temperature
+    id: indoor_temperature
+    entity_id: ${indoor_temperature}
+  - platform: homeassistant
+    name: Indoor humidity
+    id: indoor_humidity
+    entity_id: ${indoor_humidity}
+
+graph:
+  - id: energy_graph
+    sensor: solar_energy
+    duration: 12h
+    min_value: 0
+    max_value: 10000
+    width: 600
+    height: 120
+    x_grid: 5min
+    y_grid: 500
+    border: true

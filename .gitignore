@@ -6,3 +6,4 @@
 .esphome/build/*
 .esphome/idedata/*
 
+.esphome/*

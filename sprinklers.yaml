@@ -46,10 +46,12 @@ select:
       - "Hose"
       - "Garden"
       - "Front"
+      - "Fence"
       - "Back"
       - "Hose (M)"
       - "Garden (M)"
       - "Front (M)"
+      - "Fence (M)"
       - "Back (M)"
     initial_option: "Hose"
     optimistic: true
@@ -136,7 +138,7 @@ sensor:
     trigger_pin: GPIO16
     echo_pin: GPIO17
     id: tanklevel
-    update_interval: 2s
+    update_interval: 30s
     on_value:
       - component.update: screen
 
@@ -146,7 +148,7 @@ sensor:
     lambda: |-
       auto depth = id(tanklevel).state;
       if (isnan(depth))
-        return 0;
+        return 0.0;
       auto full = 20;
       auto empty = 157;
       auto unit = 22;
@@ -156,25 +158,23 @@ sensor:
       if (depth <= full)
         depth = full;
       depth = 100 - ((depth - full) * 100 / (empty - full));
-      return (int)(depth * unit / 10) * 10;
+      return (double)(depth * unit / 10) * 10;
 
 
 text_sensor:
   - platform: template
     id: state
-    name: Sprinkler State
+    name: "Sprinkler State"
     lambda: |-
-      std::string result("Idle");
-      if (id(sprinklers).active_valve().has_value()) {
-        auto active = id(sprinklers).active_valve().value();
-        auto remaining = id(sprinklers).time_remaining_active_valve().value();
-        auto name = id(sprinklers).valve_name(active);
-        char buf[80];
-        sprintf(buf, "%s: %d:%02d", name, remaining / 60, remaining % 60);
-        result = buf;
-      }
+      if (!id(sprinklers).active_valve().has_value())
+        return { "Idle" };
+      auto active = id(sprinklers).active_valve().value();
+      auto remaining = id(sprinklers).time_remaining_active_valve().value();
+      auto name = id(sprinklers).valve_name(active);
+      char buf[80];
+      sprintf(buf, "%s: %d:%02d", name, remaining / 60, remaining % 60);
+      std::string result(buf);
       return result;
-        return { "Idle" };      
     update_interval: 5s
 
 binary_sensor:
@@ -236,11 +236,17 @@ button:
   - platform: template
     id: runOnce
     name: "Run"
-    on_press: 
-      - sprinkler.start_single_valve: 
-          id: sprinklers
-          valve_number: !lambda 'return id(source).active_index().value();'
-          run_duration: !lambda 'return atoi(id(runtime).state.c_str()) * 60;'
+    on_press:
+      - if:
+          condition:
+            lambda: 'return id(sprinklers).active_valve().has_value();'
+          then:
+            - sprinkler.shutdown: sprinklers
+          else:      
+            - sprinkler.start_single_valve: 
+                id: sprinklers
+                valve_number: !lambda 'return id(source).active_index().value();'
+                run_duration: !lambda 'return atoi(id(runtime).state.c_str()) * 60;'
         
 
 switch:
@@ -393,7 +399,7 @@ display:
       auto blue = Color(147, 194, 249);
       auto white = Color(255, 255, 255);
 
-      auto level = id(volume).state;
+      auto level = (int)id(volume).state;
       auto rotary = id(controller).state;
 
       it.strftime(160, 4, id(font16), TextAlign::TOP_RIGHT, "%A %I:%M", id(esptime).now());

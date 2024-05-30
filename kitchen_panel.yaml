@@ -1,0 +1,404 @@
+substitutions:
+  device_name: Kitchen Panel
+  device_id: kitchen-panel
+  # Home assistant sensors
+  # Weather conditions
+  weather_conditions: weather.forecast_bromellws
+  # Outdoor sensors
+  outdoor_temperature: sensor.bromellws_sensors_temperature
+  outdoor_humidity: sensor.bromellws_sensors_humidity
+  outdoor_rainfall: sensor.bromellws_sensors_precipitation_today
+  outdoor_wind_strength: sensor.bromellws_sensors_wind_speed
+  # Indoor sensors
+  indoor_temperature: sensor.kitchen_temp
+  indoor_humidity: sensor.kitchen_panel_humidity
+
+web_server:
+ 
+esphome:
+  name: ${device_id}
+  name_add_mac_suffix: false
+  project:
+    name: esphome.web
+    version: '1.0'
+  on_boot:
+    - priority: 220.0
+      then:
+        - it8951e.clear
+        - delay: 100ms
+        - component.update: m5paper_display
+    - priority: -100.0
+      then:
+        - delay: 10s
+        - component.update: m5paper_display
+
+esp32:
+  board: m5stack-grey
+  framework:
+    type: arduino
+
+external_components:
+  - source: github://Passific/m5paper_esphome
+
+# Enable logging
+logger:
+#  level: DEBUG
+
+# Enable psram
+psram:
+
+# Enable Home Assistant API
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "ZYKDuuG9c2THPy9hLZQUx90CocBE3sPOhwznAlqFlOI="
+
+ota:
+  password: "95c1c7af2f5bb83d89f28ab26a5d3a6b"
+
+wifi:
+  ssid: TooManyComp
+  password: BigBasement
+
+globals:
+  - id: material_icons_map
+    type: std::map<std::string, std::string>
+    restore_value: no
+    initial_value: |
+      {
+        {"mdi-weather-night", "󰖔"},
+        {"mdi-weather-cloudy", "󰖐"},
+        {"mdi-weather-cloudy-alert", "󰼯"},
+        {"mdi-weather-fog", "󰖑"},
+        {"mdi-weather-hail", "󰖒"},
+        {"mdi-weather-lightning-rainy", "󰙾"},
+        {"mdi-weather-lightning", "󰖓"},
+        {"mdi-weather-partly-cloudy", "󰖕"},
+        {"mdi-weather-night-partly-cloudy", "󰼱"},
+        {"mdi-weather-pouring", "󰖖"},
+        {"mdi-weather-rainy", "󰖗"},
+        {"mdi-weather-snowy-rainy", "󰙿"},
+        {"mdi-weather-snowy", "󰖘"},
+        {"mdi-weather-sunny", "󰖙"},
+        {"mdi-weather-windy-variant", "󰖞"},
+        {"mdi-weather-windy", "󰖝"},
+        {"mdi-cloud-question", "󰨹"},
+        {"mdi-thermometer", "󰔏"},
+        {"mdi-water-percent", "󰖎"},
+        {"mdi-molecule-co2", "󰟤"},
+        {"mdi-wind-power-outline", "󱪉"},
+        {"mdi-home-outline", "󰚡"},
+        {"mdi-tree-outline", "󰹩"},
+        {"mdi-gauge", "󰊚"},
+        {"mdi-battery-high", "󱊣"},
+        {"mdi-battery-medium", "󱊢"},
+        {"mdi-battery-low", "󱊡"},
+        {"mdi-battery-alert-variant-outline", "󱃍"},
+        {"mdi-battery-charging-high", "󱊦"},
+        {"mdi-battery-unknown", "󰂑"},
+        {"mdi-shield-outline", "󰒙"},
+        {"mdi-shield-home-outline", "󰳋"},
+        {"mdi-shield-lock-outline", "󰳌"},
+        {"mdi-shield-moon-outline", "󱠩"},
+        {"mdi-shield-alert-outline", "󰻍"},
+        {"mdi-molecule-co2", "󰟤"},
+        {"mdi-radioactive", "󰐼"},
+        {"mdi-numeric-0-circle-outline", "󰲟"},
+        {"mdi-numeric-1-circle-outline", "󰲡"},
+        {"mdi-numeric-2-circle-outline", "󰲣"},
+        {"mdi-numeric-3-circle-outline", "󰲥"},
+        {"mdi-numeric-4-circle-outline", "󰲧"},
+        {"mdi-numeric-5-circle-outline", "󰲩"},
+        {"mdi-numeric-6-circle-outline", "󰲫"},
+        {"mdi-numeric-7-circle-outline", "󰲭"},
+        {"mdi-numeric-8-circle-outline", "󰲯"},
+        {"mdi-numeric-9-plus-circle-outline", "󰲳"},
+        {"mdi-solar-panel-large", "󰶜"},
+        {"home-lightning-bolt-outline", "󱤄"},
+      }
+
+font:
+  - file: 'gfonts://Roboto'
+    id: normal_font
+    size: 64
+  - file: 'gfonts://Roboto'
+    id: small_font
+    size: 40
+  - file: "fonts/materialdesignicons-webfont.ttf"
+    id: small_icons_font
+    size: 56
+    glyphs: [
+        '󰖖',    # mdi-weather-pouring
+        '󰔏',    # mdi-thermometer
+        '󰖎',    # mdi-water-percent
+        '󰟤',    # mdi-molecule-co2
+        '󱪉',    # mdi-wind-power-outline
+        '󰚡',    # mdi-home-outline
+        '󰹩',    # mdi-tree-outline
+        '󰊚',    # mdi-gauge
+        '󰶜',    # mdi-solar-panel-large
+        '󱤄',    # mdi-home-lightning-bolt-outline
+        '󰴾',    # mdi-transmission-tower
+      ]
+  - file: "fonts/materialdesignicons-webfont.ttf"
+    id: weather_font
+    size: 256
+    glyphs: [
+        '󰖔',    #mdi-weather-night
+        '󰖐',    #mdi-weather-cloudy
+        '󰼯',    #mdi-weather-cloudy-alert
+        '󰖑',    #mdi-weather-fog
+        '󰖒',    #mdi-weather-hail
+        '󰙾',    #mdi-weather-lightning-rainy
+        '󰖓',    #mdi-weather-lightning
+        '󰖕',    #mdi-weather-partly-cloudy
+        '󰼱',    #mdi-weather-night-partly-cloudy
+        '󰖖',    #mdi-weather-pouring
+        '󰖗',    #mdi-weather-rainy
+        '󰙿',    #mdi-weather-snowy-rainy
+        '󰖘',    #mdi-weather-snowy
+        '󰖙',    #mdi-weather-sunny
+        '󰖞',    #mdi-weather-windy-variant
+        '󰖝',    #mdi-weather-windy
+        '󰨹',    #mdi-cloud-question
+      ]
+
+spi:
+  clk_pin: GPIO14
+  mosi_pin: GPIO12
+  miso_pin: GPIO13
+
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+
+display:
+  - platform: it8951e
+    id: m5paper_display
+    cs_pin: GPIO15
+    reset_pin: GPIO23
+    reset_duration: 100ms
+    busy_pin: GPIO27
+    rotation: 0
+    reversed: False
+    update_interval: never
+    lambda: |-
+      // Clock
+      // it.strftime(25, 420, id(clock_font), "%H:%M", id(rtc_time).now());
+
+      // Weather icon
+      Color weather_icon_color;
+      weather_icon_color.raw_32 = 0x0D;
+
+      std::string conditions = id(weather_conditions).state;
+
+      std::string img = id(material_icons_map)["mdi-cloud-question"];
+      if (conditions == "clear-night")
+      {
+          conditions = "clear";
+          img = id(material_icons_map)["mdi-weather-night"];
+      }
+      else if (conditions == "cloudy")
+          img = id(material_icons_map)["mdi-weather-cloudy"];
+      else if (conditions == "exceptional")
+          img = id(material_icons_map)["mdi-weather-cloudy-alert"];
+      else if (conditions == "fog")
+          img = id(material_icons_map)["mdi-weather-fog"];
+      else if (conditions == "hail")
+          img = id(material_icons_map)["mdi-weather-hail"];
+      else if (conditions == "lightning-rainy")
+      {
+          conditions = "thunderstorm";
+          img = id(material_icons_map)["mdi-weather-lightning-rainy"];
+      }
+      else if (conditions == "lightning")
+          img = id(material_icons_map)["mdi-weather-lightning"];
+      else if (conditions == "partlycloudy")
+      {
+          bool is_night = id(sun_position).state == "below_horizon";
+          if (is_night)
+              img = id(material_icons_map)["mdi-weather-night-partly-cloudy"];
+          else
+              img = id(material_icons_map)["mdi-weather-partly-cloudy"];
+          conditions = "partly cloudy";
+      }
+      else if (conditions == "pouring")
+      {
+          img = id(material_icons_map)["mdi-weather-pouring"];
+          conditions = "shower";
+      }
+      else if (conditions == "rainy")
+          img = id(material_icons_map)["mdi-weather-rainy"];
+      else if (conditions == "snowy-rainy")
+      {
+          img = id(material_icons_map)["mdi-weather-snowy-rainy"];
+          conditions = "sleet";
+      }
+      else if (conditions == "snowy")
+          img = id(material_icons_map)["mdi-weather-snowy"];
+      else if (conditions == "sunny")
+          img = id(material_icons_map)["mdi-weather-sunny"];
+      else if (conditions == "windy")
+          img = id(material_icons_map)["mdi-weather-windy"];
+      else if (conditions == "windy-variant")
+      {
+          img = id(material_icons_map)["mdi-weather-windy-variant"];
+          conditions = "windy";
+      }
+      it.print(25, 55, id(weather_font), weather_icon_color, img.c_str());
+
+      float value;
+
+
+      #define NOT_NAN(x) ((x) == (x))
+
+      // Temperature
+      // it.print(32, 340, id(normal_font), weather_icon_color, id(material_icons_map)["mdi-thermometer"].c_str());
+      value = id(outdoor_temperature).state;
+      if (NOT_NAN(value))
+        it.printf(38, 340, id(normal_font), "%.1f°C", value);
+      else
+        it.print(38, 340, id(normal_font), "---");
+
+      it.graph(320, 10, id(energy_graph));
+
+
+      uint base_y = 450;
+      uint col1 = 320;
+      uint colgap = 320;
+      uint gap = 60;
+
+
+      it.print(col1, base_y, id(small_icons_font), weather_icon_color, "\U000F0D9C");
+      value = id(solar_energy).state / 1000.;
+      if (NOT_NAN(value))
+        it.printf(col1 + gap, base_y, id(normal_font), "%.2f kW", value);
+      else
+        it.print(col1 + gap, base_y, id(normal_font), "---");
+
+      col1 += colgap;
+      it.print(col1, base_y, id(small_icons_font), weather_icon_color, "\U000F1904");
+      value = id(load_energy).state / 1000.;
+      if (NOT_NAN(value))
+        it.printf(col1 + gap, base_y, id(normal_font), "%.2f kW", value);
+      else
+        it.print(col1 + gap, base_y, id(normal_font), "---");
+
+color:
+  - id: weather_icon_color
+    red: 100%
+    blue: 100%
+    green: 100%
+
+graph:
+  - id: energy_graph
+    duration: 6h
+    min_value: 0
+    max_value: 10000
+    width: 600
+    height: 400
+    x_grid: 1h
+    y_grid: 1000
+    border: false
+    traces:
+      - sensor: solar_energy
+        line_type: SOLID
+        line_thickness: 6
+        continuous: true
+        color: weather_icon_color
+      - sensor: load_energy
+        line_type: DASHED
+        line_thickness: 6
+        color: weather_icon_color
+
+touchscreen:
+  - platform: gt911
+    display: m5paper_display
+    id: gt911_touchscreen
+    interrupt_pin: GPIO36
+
+switch:
+  - platform: restart
+    id: restart_switch
+    name: ${device_name} Restart
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+    timezone: Australia/Canberra
+    on_time_sync:
+      - bm8563.write_time
+  - platform: bm8563
+    id: rtc_time
+    sleep_duration: 30000ms
+    on_time:
+      - seconds: /30
+        then:
+          - component.update: m5paper_display
+
+m5paper:
+  battery_power_pin: GPIO5
+  main_power_pin: GPIO2
+
+sensor:
+  - platform: sht3xd
+    temperature:
+      name: ${device_name} temperature
+      id: m5paper_temperature
+      device_class: "temperature"
+      state_class: "measurement"
+      icon: mdi:thermometer
+    humidity:
+      name: ${device_name} humidity
+      id: m5paper_humidity
+      device_class: "humidity"
+      state_class: "measurement"
+      icon: mdi:water-percent
+    address: 0x44
+    update_interval: 10s
+  - platform: homeassistant
+    name: Load Energy
+    id: load_energy
+    entity_id: sensor.load_power
+  - platform: homeassistant
+    name: Solar Energy
+    id: solar_energy
+    entity_id: sensor.total_dc_power
+  - platform: homeassistant
+    name: Outdoor temperature
+    id: outdoor_temperature
+    entity_id: ${outdoor_temperature}
+
+
+text_sensor:
+  - platform: homeassistant
+    name: Weather
+    id: weather_conditions
+    entity_id: ${weather_conditions}
+  - platform: homeassistant
+    name: Sun
+    id: sun_position
+    entity_id: sun.sun
+
+binary_sensor:
+  - platform: gpio
+    name: ${device_name} right button
+    id: right_button
+    icon: mdi:gesture-tap-button
+    pin:
+      number: GPIO37
+      inverted: true
+    on_release:
+      - component.update: m5paper_display
+  - platform: gpio
+    name: ${device_name} BTN/PWR button
+    icon: mdi:gesture-tap-button
+    pin:
+      number: GPIO38
+      inverted: true
+  - platform: gpio
+    name: ${device_name} left button
+    icon: mdi:gesture-tap-button
+    pin:
+      number: GPIO39
+      inverted: true

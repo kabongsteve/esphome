@@ -95,23 +95,25 @@ binary_sensor:
 
   - platform: gpio
     pin: 
-      number: GPIO12
-      mode: 
-        input: true
-        pullup: true
-      inverted: true
-    name: "EndStopDown"
-    filters:
-      - delayed_on: 10ms
-
-  - platform: gpio
-    pin: 
       number: GPIO27
       mode: 
         input: true
         pullup: true
       inverted: true
-    name: "EndStopUp"
+    id: endstop_down
+    name: "Down Endstop"
+    filters:
+      - delayed_on: 10ms
+
+  - platform: gpio
+    pin: 
+      number: GPIO12
+      mode: 
+        input: true
+        pullup: true
+      inverted: true
+    id: endstop_up
+    name: "Up EndStop"
     filters:
       - delayed_on: 10ms
 
@@ -132,22 +134,23 @@ switch:
     interlock_wait_time: 2s
 
 cover:
-  - platform: time_based
+  - platform: endstop
     id: lift_cover
     name: "Lift"
     open_action:
       - switch.turn_on: relay_1
     open_duration: 20sec
+    open_endstop: endstop_up
 
     close_action:
       - switch.turn_on: relay_2
     close_duration: 20sec
-
+    close_endstop: endstop_down
     stop_action:
       - switch.turn_off: relay_1
       - switch.turn_off: relay_2
     
-    assumed_state: true
+    max_duration: 25s
 
 
 esp32_ble_tracker:
