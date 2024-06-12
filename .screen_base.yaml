@@ -7,21 +7,18 @@ esphome:
   on_boot:
     - priority: 220.0
       then:
-        - it8951e.clear
+        # - it8951e.clear
         - delay: 100ms
-        - component.update: m5paper_display
+        - component.update: epaper_display
     - priority: -100.0
       then:
         - delay: 10s
-        - component.update: m5paper_display
+        - component.update: epaper_display
 
 esp32:
-  board: m5stack-grey
+  board: esp32dev
   framework:
     type: arduino
-
-external_components:
-  - source: github://Passific/m5paper_esphome
 
 # Enable logging
 logger:
@@ -177,21 +174,21 @@ font:
       ]
 
 spi:
-  clk_pin: GPIO14
-  mosi_pin: GPIO12
-  miso_pin: GPIO13
-
-i2c:
-  sda: GPIO21
-  scl: GPIO22
+  clk_pin: GPIO13
+  mosi_pin: GPIO14
+  miso_pin: GPIO12
 
 display:
-  - platform: it8951e
-    id: m5paper_display
+  - platform: waveshare_epaper
+    id: epaper_display
     cs_pin: GPIO15
-    reset_pin: GPIO23
+    dc_pin: GPIO27
+    reset_pin: GPIO26
     reset_duration: 100ms
-    busy_pin: GPIO27
+    busy_pin: 
+      number: GPIO25
+      inverted: true
+    model: 7.50in-bV3
     rotation: 0
     reversed: False
     update_interval: never
@@ -353,12 +350,6 @@ graph:
     y_grid: 500
     border: true
 
-touchscreen:
-  - platform: gt911
-    display: m5paper_display
-    id: gt911_touchscreen
-    interrupt_pin: GPIO36
-
 switch:
   - platform: restart
     id: restart_switch
@@ -376,37 +367,10 @@ time:
     on_time:
       - seconds: 0
         then:
-          - component.update: m5paper_display
+          - component.update: epaper_display
 
-m5paper:
-  battery_power_pin: GPIO5
-  main_power_pin: GPIO2
 
 sensor:
-  - platform: adc
-    disabled_by_default: true
-    pin: GPIO35
-    name: ${device_name} battery voltage
-    id: m5paper_battery_voltage
-    update_interval: 10s
-    attenuation: 11db
-    filters:
-      - multiply: 2 #1,27272727
-  - platform: sht3xd
-    temperature:
-      name: ${device_name} temperature
-      id: m5paper_temperature
-      device_class: "temperature"
-      state_class: "measurement"
-      icon: mdi:thermometer
-    humidity:
-      name: ${device_name} humidity
-      id: m5paper_humidity
-      device_class: "humidity"
-      state_class: "measurement"
-      icon: mdi:water-percent
-    address: 0x44
-    update_interval: 10s
   - platform: homeassistant
     name: Soler Energy
     id: solar_energy
@@ -445,26 +409,3 @@ text_sensor:
     name: Sun
     id: sun_position
     entity_id: sun.sun
-
-binary_sensor:
-  - platform: gpio
-    name: ${device_name} right button
-    id: right_button
-    icon: mdi:gesture-tap-button
-    pin:
-      number: GPIO37
-      inverted: true
-    on_release:
-      - component.update: m5paper_display
-  - platform: gpio
-    name: ${device_name} BTN/PWR button
-    icon: mdi:gesture-tap-button
-    pin:
-      number: GPIO38
-      inverted: true
-  - platform: gpio
-    name: ${device_name} left button
-    icon: mdi:gesture-tap-button
-    pin:
-      number: GPIO39
-      inverted: true

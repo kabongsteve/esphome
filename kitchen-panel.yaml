@@ -22,18 +22,13 @@ esphome:
     name: esphome.web
     version: '1.0'
   on_boot:
-    - priority: 220.0
-      then:
-        - it8951e.clear
-        - delay: 100ms
-        - component.update: m5paper_display
     - priority: -100.0
       then:
         - delay: 10s
-        - component.update: m5paper_display
+        - component.update: epaper_display
 
 esp32:
-  board: m5stack-grey
+  board: esp32dev
   framework:
     type: arduino
 
@@ -44,17 +39,13 @@ external_components:
 logger:
 #  level: DEBUG
 
-# Enable psram
-psram:
-
-# Enable Home Assistant API
 # Enable Home Assistant API
 api:
   encryption:
-    key: "ZYKDuuG9c2THPy9hLZQUx90CocBE3sPOhwznAlqFlOI="
+    key: "NzTWoy3ipy8ZVL3m+VxV9PP3TyzTJ3ZyJETlpUEtkng="
 
 ota:
-  password: "95c1c7af2f5bb83d89f28ab26a5d3a6b"
+  password: "e9f90e328a558a632d9b598e9ea5afe4"
 
 wifi:
   ssid: TooManyComp
@@ -120,13 +111,13 @@ globals:
 font:
   - file: 'gfonts://Roboto'
     id: normal_font
-    size: 64
+    size: 42
   - file: 'gfonts://Roboto'
     id: small_font
-    size: 40
+    size: 24
   - file: "fonts/materialdesignicons-webfont.ttf"
     id: small_icons_font
-    size: 56
+    size: 48
     glyphs: [
         '󰖖',    # mdi-weather-pouring
         '󰔏',    # mdi-thermometer
@@ -142,7 +133,7 @@ font:
       ]
   - file: "fonts/materialdesignicons-webfont.ttf"
     id: weather_font
-    size: 256
+    size: 128
     glyphs: [
         '󰖔',    #mdi-weather-night
         '󰖐',    #mdi-weather-cloudy
@@ -164,23 +155,22 @@ font:
       ]
 
 spi:
-  clk_pin: GPIO14
-  mosi_pin: GPIO12
-  miso_pin: GPIO13
-
-i2c:
-  sda: GPIO21
-  scl: GPIO22
+  clk_pin: GPIO13
+  mosi_pin: GPIO14
+  miso_pin: GPIO12
 
 display:
-  - platform: it8951e
-    id: m5paper_display
+  - platform: waveshare_epaper
+    id: epaper_display
     cs_pin: GPIO15
-    reset_pin: GPIO23
+    dc_pin: GPIO27
+    reset_pin: GPIO26
     reset_duration: 100ms
-    busy_pin: GPIO27
+    busy_pin: 
+      number: GPIO25
+      inverted: true
+    model: 7.50in-bV3
     rotation: 0
-    reversed: False
     update_interval: never
     lambda: |-
       // Clock
@@ -245,27 +235,37 @@ display:
           img = id(material_icons_map)["mdi-weather-windy-variant"];
           conditions = "windy";
       }
-      it.print(25, 55, id(weather_font), weather_icon_color, img.c_str());
+      it.print(8, 8, id(weather_font), weather_icon_color, img.c_str());
 
       float value;
 
 
       #define NOT_NAN(x) ((x) == (x))
 
-      // Temperature
-      // it.print(32, 340, id(normal_font), weather_icon_color, id(material_icons_map)["mdi-thermometer"].c_str());
       value = id(outdoor_temperature).state;
       if (NOT_NAN(value))
-        it.printf(38, 340, id(normal_font), "%.1f°C", value);
+        it.printf(16, 130, id(normal_font), "%.1f°C", value);
       else
-        it.print(38, 340, id(normal_font), "---");
+        it.print(16, 130, id(normal_font), "---");
 
-      it.graph(320, 10, id(energy_graph));
+      value = id(rain_today).state;
+      if (NOT_NAN(value))
+        it.printf(16, 190, id(small_font), "%.1f mm", value);
+      else
+        it.print(16, 190, id(small_font), "---");
+
+      value = id(rain_rate).state;
+      if (NOT_NAN(value))
+        it.printf(16, 220, id(small_font), "%.1f mm/h", value);
+      else
+        it.print(16, 220, id(small_font), "---");
+
+      it.graph(152, 6, id(energy_graph));
 
 
-      uint base_y = 450;
-      uint col1 = 320;
-      uint colgap = 320;
+      uint base_y = 350;
+      uint col1 = 150;
+      uint colgap = 240;
       uint gap = 60;
 
 
@@ -295,27 +295,22 @@ graph:
     duration: 6h
     min_value: 0
     max_value: 10000
-    width: 600
-    height: 400
+    width: 640
+    height: 300
     x_grid: 1h
-    y_grid: 1000
+    y_grid: 2000
     border: false
     traces:
       - sensor: solar_energy
         line_type: SOLID
-        line_thickness: 6
+        line_thickness: 8
         continuous: true
         color: weather_icon_color
       - sensor: load_energy
         line_type: DASHED
-        line_thickness: 6
+        line_thickness: 8
         color: weather_icon_color
 
-touchscreen:
-  - platform: gt911
-    display: m5paper_display
-    id: gt911_touchscreen
-    interrupt_pin: GPIO36
 
 switch:
   - platform: restart
@@ -326,36 +321,8 @@ time:
   - platform: homeassistant
     id: homeassistant_time
     timezone: Australia/Canberra
-    on_time_sync:
-      - bm8563.write_time
-  - platform: bm8563
-    id: rtc_time
-    sleep_duration: 30000ms
-    on_time:
-      - seconds: /30
-        then:
-          - component.update: m5paper_display
-
-m5paper:
-  battery_power_pin: GPIO5
-  main_power_pin: GPIO2
 
 sensor:
-  - platform: sht3xd
-    temperature:
-      name: ${device_name} temperature
-      id: m5paper_temperature
-      device_class: "temperature"
-      state_class: "measurement"
-      icon: mdi:thermometer
-    humidity:
-      name: ${device_name} humidity
-      id: m5paper_humidity
-      device_class: "humidity"
-      state_class: "measurement"
-      icon: mdi:water-percent
-    address: 0x44
-    update_interval: 10s
   - platform: homeassistant
     name: Load Energy
     id: load_energy
@@ -368,6 +335,15 @@ sensor:
     name: Outdoor temperature
     id: outdoor_temperature
     entity_id: ${outdoor_temperature}
+  - platform: homeassistant
+    name: rain_today
+    id: rain_today
+    entity_id: sensor.bromellws_sensors_precipitation_today
+  - platform: homeassistant
+    name: rain_rate
+    id: rain_rate
+    entity_id: sensor.bromellws_sensors_precipitation_rate
+
 
 
 text_sensor:
@@ -380,25 +356,7 @@ text_sensor:
     id: sun_position
     entity_id: sun.sun
 
-binary_sensor:
-  - platform: gpio
-    name: ${device_name} right button
-    id: right_button
-    icon: mdi:gesture-tap-button
-    pin:
-      number: GPIO37
-      inverted: true
-    on_release:
-      - component.update: m5paper_display
-  - platform: gpio
-    name: ${device_name} BTN/PWR button
-    icon: mdi:gesture-tap-button
-    pin:
-      number: GPIO38
-      inverted: true
-  - platform: gpio
-    name: ${device_name} left button
-    icon: mdi:gesture-tap-button
-    pin:
-      number: GPIO39
-      inverted: true
+interval:
+  - interval: 300s
+    then:
+      - component.update: epaper_display
