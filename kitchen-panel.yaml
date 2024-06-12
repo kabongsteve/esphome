@@ -235,7 +235,9 @@ display:
           img = id(material_icons_map)["mdi-weather-windy-variant"];
           conditions = "windy";
       }
-      it.print(8, 8, id(weather_font), weather_icon_color, img.c_str());
+
+      uint left = 24;
+      it.print(left, 8, id(weather_font), weather_icon_color, img.c_str());
 
       float value;
 
@@ -244,21 +246,21 @@ display:
 
       value = id(outdoor_temperature).state;
       if (NOT_NAN(value))
-        it.printf(16, 130, id(normal_font), "%.1f°C", value);
+        it.printf(left, 130, id(normal_font), "%.1f°C", value);
       else
-        it.print(16, 130, id(normal_font), "---");
+        it.print(left, 130, id(normal_font), "---");
 
       value = id(rain_today).state;
       if (NOT_NAN(value))
-        it.printf(16, 190, id(small_font), "%.1f mm", value);
+        it.printf(left, 190, id(small_font), "%.1f mm", value);
       else
-        it.print(16, 190, id(small_font), "---");
+        it.print(left, 190, id(small_font), "---");
 
       value = id(rain_rate).state;
       if (NOT_NAN(value))
-        it.printf(16, 220, id(small_font), "%.1f mm/h", value);
+        it.printf(left, 220, id(small_font), "%.1f mm/h", value);
       else
-        it.print(16, 220, id(small_font), "---");
+        it.print(left, 220, id(small_font), "---");
 
       it.graph(152, 6, id(energy_graph));
 
