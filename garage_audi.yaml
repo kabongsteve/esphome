@@ -34,7 +34,7 @@ captive_portal:
 globals:
   - id: auto_close_enabled
     type: bool
-    restore_value: no
+    restore_value: yes
     initial_value: 'true'
         
 switch:
@@ -46,6 +46,24 @@ switch:
     on_turn_on:
     - delay: 250ms
     - switch.turn_off: relay
+
+  - platform: template
+    name: "Auto Close"
+    restore_mode: ALWAYS_ON
+    lambda: |-
+      if (id(auto_close_enabled)) {
+        return true;
+      } else {
+        return false;
+      }
+    turn_on_action:
+      - globals.set: 
+          id: auto_close_enabled
+          value: 'true'
+    turn_off_action:
+      - globals.set: 
+          id: auto_close_enabled
+          value: 'false'
   
 binary_sensor:
   - platform: gpio
