@@ -1,97 +1,100 @@
 substitutions:
-  device_name: garageaudi
-  ssid: TooManyComp
-  ssid_pwd: BigBasement
   delay_time: 3min
   retry_time: 30s
-  mqtt_host: 192.168.12.46
-  mqtt_user: mqtt
-  mqtt_pwd: Bromell
+  interval_time: 7min
 
 esphome:
-  name: $device_name
-  platform: ESP8266
-  board: esp8285
+  name: garageaudi
+  friendly_name: garage_audi
   on_boot:
     then:
-      - switch.turn_on: autoclose
+      - cover.close: door
+
+esp8266:
+  board: esp8285
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "bNAujbOwP2e3IvgVtu5tI66y9U9QFzQG8DSyAPGakt4="
 
 ota:
-  password: ""
+  password: "e63616e001f0dfe4785e4c14cac4e338"
+  platform: esphome
 
 wifi:
-  ssid: $ssid
-  password: $ssid_pwd
-
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
-  ap:
-    ssid: $devicename
-    password: $ssid_pwd
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
 
 captive_portal:
 
-
+globals:
+  - id: auto_close_enabled
+    type: bool
+    restore_value: no
+    initial_value: 'true'
+        
 switch:
   - platform: gpio
     id: relay
     pin: 
       number: 13
-      inverted: true
+      inverted: false
     on_turn_on:
     - delay: 250ms
     - switch.turn_off: relay
-  - platform: template
-    id: autoclose
-    name: Auto Close
-    optimistic: true
-    restore_state: true
-    on_turn_on:
-      while:
-        condition:
-          and:
-            - binary_sensor.is_off: sensor
-            - switch.is_on: autoclose
-        then:
-          - switch.turn_on: relay
-          - wait_until:
-              condition:
-                binary_sensor.is_on: sensor
-              timeout: $retry_time
-
+  
 binary_sensor:
   - platform: gpio
     id: button
     pin: 
-      number: 0
-    on_click:
-    - switch.turn_on: relay
-    on_double_click:
-    - switch.toggle: autoclose
+      number: GPIO0
+      inverted: true
+    on_press:
+      - script.stop: auto_close
+      - if:
+          condition:
+            binary_sensor.is_on: sensor
+          then:
+            - logger.log: "Set Auto Close On and Close"
+            - globals.set: 
+                id: auto_close_enabled
+                value: 'true'
+          else:
+            - logger.log: "Set Auto Close Off and Open"
+            - globals.set: 
+                id: auto_close_enabled
+                value: 'false'
+      - switch.turn_on: relay
+
   - platform: gpio
     pin: 
-      number: 12
+      number: GPIO12
       inverted: true
     internal: true
     id: sensor
-    on_release:
-      then:
-        - if:
-            condition:
-              switch.is_on: autoclose
-            then:
+    on_press:
+      - script.execute: auto_close
+
+script:
+  - id: auto_close
+    then:
+      - if:
+          condition:
+            - lambda: "return id(auto_close_enabled) == true;"
+          then:
+            - logger.log: "Door Open, waiting to close"
             - delay: $delay_time
-            - while:
-                condition:
-                  and:
-                    - binary_sensor.is_off: sensor
-                    - switch.is_on: autoclose
-                then:
-                  - switch.turn_on: relay
-                  - wait_until:
-                      condition:
-                        binary_sensor.is_on: sensor
-                      timeout: $retry_time
-                  
+            - logger.log: "Auto Close Close Door"
+            - cover.close: door
+            - globals.set: 
+                id: auto_close_enabled
+                value: 'true'
+          else:
+            - logger.log: "Auto Close is Off"
 
 cover:
   - platform: template
@@ -100,20 +103,20 @@ cover:
     name: Door
     lambda: |-
       if (id(sensor).state) {
-        return COVER_CLOSED;
-      } else {
         return COVER_OPEN;
+      } else {
+        return COVER_CLOSED;
       }
     open_action:
       if:
         condition:
-          binary_sensor.is_on: sensor
+          binary_sensor.is_off: sensor
         then:
           switch.turn_on: relay
     close_action:
       if:
         condition:
-          binary_sensor.is_off: sensor
+          binary_sensor.is_on: sensor
         then:
           switch.turn_on: relay
     stop_action:
@@ -121,10 +124,11 @@ cover:
 
 
 mqtt:
-  broker: $mqtt_host
-  username: $mqtt_user
-  password: $mqtt_pwd
+  broker: !secret mqtt_host
+  username: !secret mqtt_user
+  password: !secret mqtt_pwd
   discovery: false
 
 web_server:
   port: 80
+  include_internal: true

@@ -1,0 +1,82 @@
+substitutions:
+  name: "testlight"
+  friendly_name: Test Lights
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: false
+  project:
+    name: esphome.web
+    version: '1.0'
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+    version: recommended
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+# Allow Over-The-Air updates
+ota:
+
+wifi:
+  ssid: TooManyComp
+  password: BigBasement
+
+web_server:
+
+
+light:
+  - platform: fastled_clockless
+    rgb_order: GRB
+    pin: GPIO15
+    num_leds: 24
+    # rmt_channel: 0
+    chipset: ws2812
+    name: "WineRack"
+    id: winerack
+    effects:
+      - addressable_rainbow:
+          name: GoingUp
+          speed: 10
+          width: 4
+      - addressable_scan:
+          name: Scan
+          scan_width: 2
+          move_interval: 250ms
+      - addressable_color_wipe:
+          name: WipeDown
+          colors:
+            - red: 0%
+              green: 50%
+              blue: 100%
+              num_leds: 3
+              gradient: true
+            - red: 0%
+              green: 0%
+              blue: 0%
+              num_leds: 6
+          add_led_interval: 250ms
+          reverse: false
+      - addressable_color_wipe:
+          name: WipeUp
+          colors:
+            - red: 100%
+              green: 50%
+              blue: 0%
+              num_leds: 2
+              gradient: true
+            - red: 0%
+              green: 0%
+              blue: 0%
+              num_leds: 6
+          add_led_interval: 250ms
+          reverse: true
+
+

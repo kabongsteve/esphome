@@ -42,10 +42,11 @@ logger:
 # Enable Home Assistant API
 api:
   encryption:
-    key: "NzTWoy3ipy8ZVL3m+VxV9PP3TyzTJ3ZyJETlpUEtkng="
+    key: "WGDr9wLYiaHS2gge3zWiKTAj2kK+XjlCTI6d1vYHhf0="
 
 ota:
   password: "e9f90e328a558a632d9b598e9ea5afe4"
+  platform: esphome
 
 wifi:
   ssid: TooManyComp
@@ -111,10 +112,10 @@ globals:
 font:
   - file: 'gfonts://Roboto'
     id: normal_font
-    size: 42
+    size: 56
   - file: 'gfonts://Roboto'
     id: small_font
-    size: 24
+    size: 36
   - file: "fonts/materialdesignicons-webfont.ttf"
     id: small_icons_font
     size: 48
@@ -133,7 +134,7 @@ font:
       ]
   - file: "fonts/materialdesignicons-webfont.ttf"
     id: weather_font
-    size: 128
+    size: 196
     glyphs: [
         '󰖔',    #mdi-weather-night
         '󰖐',    #mdi-weather-cloudy
@@ -237,7 +238,7 @@ display:
       }
 
       uint left = 24;
-      it.print(left, 8, id(weather_font), weather_icon_color, img.c_str());
+      it.print(left / 2, 8, id(weather_font), weather_icon_color, img.c_str());
 
       float value;
 
@@ -246,28 +247,29 @@ display:
 
       value = id(outdoor_temperature).state;
       if (NOT_NAN(value))
-        it.printf(left, 130, id(normal_font), "%.1f°C", value);
+        it.printf(left, 200, id(normal_font), "%.1f°C", value);
       else
-        it.print(left, 130, id(normal_font), "---");
+        it.print(left, 200, id(normal_font), "---");
 
       value = id(rain_today).state;
       if (NOT_NAN(value))
-        it.printf(left, 190, id(small_font), "%.1f mm", value);
+        it.printf(left, 260, id(small_font), "%.1f mm", value);
       else
-        it.print(left, 190, id(small_font), "---");
+        it.print(left, 260, id(small_font), "---");
 
       value = id(rain_rate).state;
       if (NOT_NAN(value))
-        it.printf(left, 220, id(small_font), "%.1f mm/h", value);
+        it.printf(left, 300, id(small_font), "%.1f mm/h", value);
       else
-        it.print(left, 220, id(small_font), "---");
+        it.print(left, 300, id(small_font), "---");
 
-      it.graph(152, 6, id(energy_graph));
+      uint col1 = 230;
+
+      it.graph(col1, 6, id(energy_graph));
 
 
-      uint base_y = 350;
-      uint col1 = 150;
-      uint colgap = 240;
+      uint base_y = 320;
+      uint rowgap = 70;
       uint gap = 60;
 
 
@@ -278,7 +280,7 @@ display:
       else
         it.print(col1 + gap, base_y, id(normal_font), "---");
 
-      col1 += colgap;
+      base_y += rowgap;
       it.print(col1, base_y, id(small_icons_font), weather_icon_color, "\U000F1904");
       value = id(load_energy).state / 1000.;
       if (NOT_NAN(value))
@@ -294,10 +296,10 @@ color:
 
 graph:
   - id: energy_graph
-    duration: 6h
+    duration: 4h
     min_value: 0
     max_value: 10000
-    width: 640
+    width: 560
     height: 300
     x_grid: 1h
     y_grid: 2000

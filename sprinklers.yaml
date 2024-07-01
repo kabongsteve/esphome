@@ -405,7 +405,7 @@ display:
       it.strftime(160, 4, id(font16), TextAlign::TOP_RIGHT, "%A %I:%M", id(esptime).now());
 
       it.filled_rectangle(1, 5, 24, 124, white);
-      it.filled_rectangle(2, 123 - level, 22, level, blue);
+      it.filled_rectangle(2, 128 - level, 22, level, blue);
       if (id(sprinklers).active_valve().has_value()) {
         auto active = id(sprinklers).active_valve().value();
         auto remaining = id(sprinklers).time_remaining_active_valve().value();
@@ -434,6 +434,7 @@ api:
 
 # Allow Over-The-Air updates
 ota:
+  platform: esphome
 
 # Allow provisioning Wi-Fi via serial
 improv_serial:

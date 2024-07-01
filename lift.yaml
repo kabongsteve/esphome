@@ -24,7 +24,8 @@ api:
 
 # Allow Over-The-Air updates
 ota:
-
+  platform: esphome
+  
 wifi:
   # Set up a wifi access point
   ap: {}
@@ -55,11 +56,57 @@ light:
     id: light_led
     name: LED
     output: output_led
+  - platform: esp32_rmt_led_strip
+    rgb_order: GRB
+    pin: GPIO13
+    num_leds: 24
+    rmt_channel: 0
+    chipset: ws2812
+    name: "Chaser"
+    id: chaser
+    effects:
+      - addressable_rainbow:
+          name: GoingUp
+          speed: 10
+          width: 4
+      - addressable_scan:
+          name: Scan
+          scan_width: 2
+          move_interval: 250ms
+      - addressable_color_wipe:
+          name: WipeDown
+          colors:
+            - red: 0%
+              green: 50%
+              blue: 100%
+              num_leds: 3
+              gradient: true
+            - red: 0%
+              green: 0%
+              blue: 0%
+              num_leds: 6
+          add_led_interval: 250ms
+          reverse: false
+      - addressable_color_wipe:
+          name: WipeUp
+          colors:
+            - red: 100%
+              green: 50%
+              blue: 0%
+              num_leds: 2
+              gradient: true
+            - red: 0%
+              green: 0%
+              blue: 0%
+              num_leds: 6
+          add_led_interval: 250ms
+          reverse: true
+
 
 binary_sensor:
   - platform: gpio
     pin: 
-      number: GPIO18
+      number: GPIO22
       mode: 
         input: true
         pullup: true
@@ -77,7 +124,7 @@ binary_sensor:
   
   - platform: gpio
     pin: 
-      number: GPIO22
+      number: GPIO18
       mode: 
         input: true
         pullup: true
@@ -95,7 +142,7 @@ binary_sensor:
 
   - platform: gpio
     pin: 
-      number: GPIO27
+      number: GPIO12
       mode: 
         input: true
         pullup: true
@@ -107,7 +154,7 @@ binary_sensor:
 
   - platform: gpio
     pin: 
-      number: GPIO12
+      number: GPIO27
       mode: 
         input: true
         pullup: true
@@ -120,14 +167,14 @@ binary_sensor:
 # Relays exposed as switches
 switch:
   - platform: gpio
-    pin: GPIO16
+    pin: GPIO17
     id: relay_1
     name: Relay 1
     interlock: &relays [relay_1, relay_2]
     interlock_wait_time: 2s
 
   - platform: gpio
-    pin: GPIO17
+    pin: GPIO16
     id: relay_2
     name: Relay 2
     interlock: *relays
@@ -139,18 +186,25 @@ cover:
     name: "Lift"
     open_action:
       - switch.turn_on: relay_1
-    open_duration: 20sec
+      - light.turn_on:
+          id: chaser
+          effect: WipeUp
+    open_duration: 35sec
     open_endstop: endstop_up
 
     close_action:
       - switch.turn_on: relay_2
-    close_duration: 20sec
+      - light.turn_on:
+          id: chaser
+          effect: WipeDown
+    close_duration: 35sec
     close_endstop: endstop_down
     stop_action:
       - switch.turn_off: relay_1
       - switch.turn_off: relay_2
+      - light.turn_off: chaser
     
-    max_duration: 25s
+    max_duration: 38s
 
 
 esp32_ble_tracker:
