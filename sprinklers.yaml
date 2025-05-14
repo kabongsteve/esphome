@@ -13,12 +13,12 @@ esphome:
     - priority: 700
       then:
         - switch.turn_off: enable_relays
-#    - priority: -100
-#      then:
-#        - switch.turn_off: enable_relays
+    - priority: -100
+      then:
+        - component.update: tanklevel
 
 esp32:
-  board: esp32dev
+  board: esp32thing
   framework:
     type: arduino
 
@@ -138,19 +138,21 @@ sensor:
     trigger_pin: GPIO16
     echo_pin: GPIO17
     id: tanklevel
-    update_interval: 30s
-    on_value:
-      - component.update: screen
+    update_interval: 60s
+    timeout: 3m
 
   - platform: template
     id: volume
     name: "TankLevel"
+    unit_of_measurement: lt
+    device_class: volume
+    state_class: measurement
     lambda: |-
       auto depth = id(tanklevel).state;
       if (isnan(depth))
         return 0.0;
-      auto full = 20;
-      auto empty = 157;
+      auto full = 28;
+      auto empty = 170;
       auto unit = 22;
       depth *= 100;
       if (depth > empty)
@@ -158,7 +160,7 @@ sensor:
       if (depth <= full)
         depth = full;
       depth = 100 - ((depth - full) * 100 / (empty - full));
-      return (double)(depth * unit / 10) * 10;
+      return (double)((int)(depth * unit / 20)) * 20.0;
 
 
 text_sensor:
@@ -223,6 +225,7 @@ binary_sensor:
         - ON for at least 2s
       then:
         - sprinkler.shutdown: sprinklers
+        - component.update: tanklevel
         - component.update: screen
 
 
@@ -405,7 +408,7 @@ display:
       it.strftime(160, 4, id(font16), TextAlign::TOP_RIGHT, "%A %I:%M", id(esptime).now());
 
       it.filled_rectangle(1, 5, 24, 124, white);
-      it.filled_rectangle(2, 128 - level, 22, level, blue);
+      it.filled_rectangle(2, 124 - level, 22, level, blue);
       if (id(sprinklers).active_valve().has_value()) {
         auto active = id(sprinklers).active_valve().value();
         auto remaining = id(sprinklers).time_remaining_active_valve().value();
@@ -440,6 +443,9 @@ ota:
 improv_serial:
 
 wifi:
+  fast_connect: true
+  ssid: TooManyComp
+  password: BigBasement
 
 dashboard_import:
   package_import_url: github://esphome/example-configs/esphome-web/esp32.yaml@main

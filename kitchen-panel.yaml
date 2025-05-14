@@ -5,7 +5,6 @@ substitutions:
   # Weather conditions
   weather_conditions: weather.forecast_bromellws
   # Outdoor sensors
-  outdoor_temperature: sensor.bromellws_sensors_temperature
   outdoor_humidity: sensor.bromellws_sensors_humidity
   outdoor_rainfall: sensor.bromellws_sensors_precipitation_today
   outdoor_wind_strength: sensor.bromellws_sensors_wind_speed
@@ -28,7 +27,7 @@ esphome:
         - component.update: epaper_display
 
 esp32:
-  board: esp32dev
+  board: az-delivery-devkit-v4
   framework:
     type: arduino
 
@@ -49,8 +48,9 @@ ota:
   platform: esphome
 
 wifi:
-  ssid: TooManyComp
-  password: BigBasement
+  fast_connect: true
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
 
 globals:
   - id: material_icons_map
@@ -113,25 +113,14 @@ font:
   - file: 'gfonts://Roboto'
     id: normal_font
     size: 56
-  - file: 'gfonts://Roboto'
-    id: small_font
-    size: 36
-  - file: "fonts/materialdesignicons-webfont.ttf"
-    id: small_icons_font
-    size: 48
     glyphs: [
-        '󰖖',    # mdi-weather-pouring
-        '󰔏',    # mdi-thermometer
-        '󰖎',    # mdi-water-percent
-        '󰟤',    # mdi-molecule-co2
-        '󱪉',    # mdi-wind-power-outline
-        '󰚡',    # mdi-home-outline
-        '󰹩',    # mdi-tree-outline
-        '󰊚',    # mdi-gauge
         '󰶜',    # mdi-solar-panel-large
         '󱤄',    # mdi-home-lightning-bolt-outline
         '󰴾',    # mdi-transmission-tower
       ]
+  - file: 'gfonts://Roboto'
+    id: small_font
+    size: 36
   - file: "fonts/materialdesignicons-webfont.ttf"
     id: weather_font
     size: 196
@@ -263,6 +252,16 @@ display:
       else
         it.print(left, 300, id(small_font), "---");
 
+      value = id(tank_level).state;
+      if (NOT_NAN(value))
+        it.printf(left, 380, id(small_font), "%.0f lt", value);
+
+      value = value * 100 / 2200.0;
+      if (NOT_NAN(value))
+        it.printf(left, 440, id(small_font), "%.0f %", value);
+
+
+
       uint col1 = 230;
 
       it.graph(col1, 6, id(energy_graph));
@@ -273,7 +272,7 @@ display:
       uint gap = 60;
 
 
-      it.print(col1, base_y, id(small_icons_font), weather_icon_color, "\U000F0D9C");
+      it.print(col1, base_y, id(normal_font), weather_icon_color, "\U000F0D9C");
       value = id(solar_energy).state / 1000.;
       if (NOT_NAN(value))
         it.printf(col1 + gap, base_y, id(normal_font), "%.2f kW", value);
@@ -281,7 +280,7 @@ display:
         it.print(col1 + gap, base_y, id(normal_font), "---");
 
       base_y += rowgap;
-      it.print(col1, base_y, id(small_icons_font), weather_icon_color, "\U000F1904");
+      it.print(col1, base_y, id(normal_font), weather_icon_color, "\U000F1904");
       value = id(load_energy).state / 1000.;
       if (NOT_NAN(value))
         it.printf(col1 + gap, base_y, id(normal_font), "%.2f kW", value);
@@ -338,7 +337,7 @@ sensor:
   - platform: homeassistant
     name: Outdoor temperature
     id: outdoor_temperature
-    entity_id: ${outdoor_temperature}
+    entity_id: sensor.bromellws_sensors_temperature
   - platform: homeassistant
     name: rain_today
     id: rain_today
@@ -347,8 +346,38 @@ sensor:
     name: rain_rate
     id: rain_rate
     entity_id: sensor.bromellws_sensors_precipitation_rate
+  - platform: homeassistant
+    name: tank_level
+    id: tank_level
+    entity_id: sensor.sprinklers_tanklevel
+  - platform: homeassistant
+    name: Kitchen Temp
+    id: kitchen_temp
+    entity_id: sensor.kitchen_temp
+  - platform: homeassistant
+    name: Bedroom Temp
+    id: bedroom_temp
+    entity_id: sensor.bedroom_temp
+  - platform: homeassistant
+    name: Lounge Temp
+    id: lounge_temp
+    entity_id: sensor.lounge_temp
 
-
+climate:
+  - platform: thermostat
+    name: "Bromell Climate Controller"
+    sensor: lounge_temp
+    min_heating_off_time: 300s
+    min_heating_run_time: 300s
+    min_idle_time: 30s
+    heat_action:
+      - logger.log: "switch.turn_on: heater"
+    idle_action:
+      - logger.log: "switch.turn_off: heater"
+    default_preset: Home
+    preset:
+      - name: Home
+        default_target_temperature_low: 19.5 °C
 
 text_sensor:
   - platform: homeassistant
@@ -364,3 +393,6 @@ interval:
   - interval: 300s
     then:
       - component.update: epaper_display
+
+
+
