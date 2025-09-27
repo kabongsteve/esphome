@@ -1,0 +1,30 @@
+BLEAlias E4AAEC80EA28=BackDoor
+MI32Keys E4AAEC80EA28=d056578e7f9fadc3986a721d83fac70f 
+BLEAlias E4AAEC80E101=BasementDoor
+MI32Keys E4AAEC80E101=4f8849b8c4643f9a6b6b27b434b836d3
+BLEAlias E4AAEC80E2EF=SlidingDoor
+MI32Keys E4AAEC80E2EF=04ab86a957fac34e5d90bf81d7c4b441
+
+    - name: Basement Door
+      state_topic: "tele/tasmota_ble/BasementDoor"
+      value_template: '{{ value_json.DOOR80e101.Btn }}'
+      payload_on: "0"
+      payload_off: "1"
+      icon: mdi:door-sliding
+      device_class: door
+
+    - name: Back Door
+      state_topic: "tele/tasmota_ble/BackDoor"
+      value_template: '{{ value_json.DOOR80ea28.Btn }}'
+      payload_on: "0"
+      payload_off: "1"
+      icon: mdi:door
+      device_class: door
+    - name: Sliding Door
+      state_topic: "tele/tasmota_ble/SlidingDoor"
+      value_template: '{{ value_json.DOOR80e2ef.Btn }}'
+      payload_on: "0"
+      payload_off: "1"
+      icon: mdi:door-sliding
+      device_class: door
+
