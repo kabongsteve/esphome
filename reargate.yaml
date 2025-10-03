@@ -17,6 +17,7 @@ light:
   - platform: binary
     id: light_led
     name: LED
+    internal: true
     output: output_led
 
 binary_sensor:
@@ -25,14 +26,15 @@ binary_sensor:
       number: GPIO0
       inverted: true
     name: button
-    on_click:
-    - min_length: 250ms
-      max_length: 500ms
+    internal: true
+    filters:
+      - delayed_on: 100ms
+    on_press:
       then:
         - cover.toggle: gate
-    on_double_click:
-      min_length: 50ms
-      max_length: 500ms
+    on_click:
+    - min_length: 1s
+      max_length: 5s
       then:
         - switch.toggle: hold
 
@@ -42,6 +44,7 @@ switch:
     pin: GPIO16
     id: relay_1
     name: Close Relay
+    internal: true
     interlock: [relay_2]
     on_turn_on:
     # - light.turn_on: light_led
@@ -53,6 +56,7 @@ switch:
     pin: GPIO17
     id: relay_2
     name: Open Relay
+    internal: true
     interlock: [relay_1]
     on_turn_on:
     # - light.turn_on: light_led
@@ -67,10 +71,11 @@ switch:
     optimistic: true
     assumed_state: false
     on_turn_on:
-    - delay: 2s
+    - cover.stop: gate
+    - delay: 1s
     - cover.open: gate
     on_turn_off:
-    - delay: 2s
+    - delay: 1s
     - cover.close: gate
 
 cover:
