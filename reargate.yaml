@@ -7,6 +7,36 @@ esp32:
   framework:
     type: esp-idf
 
+
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: true
+  #frequency: 10kHz
+
+sensor:
+  - platform: ina226
+    id: power_sensor
+    address: 0x40
+    shunt_resistance: 0.1 ohm
+    max_current: 5A
+    adc_time: 1100us
+    adc_averaging: 64
+    power:
+      name: "Power"
+      id: gate_power
+      on_value_range:
+        - above: 8
+          then:
+            if:
+              condition: 
+                - lambda: 'return id(gate).position < 0.8;'
+              then:
+                - cover.toggle: gate
+                - cover.toggle: gate
+                - delay: 2 sec
+                - cover.stop: gate
+
 # LED exposed as binary light
 output:
   - platform: gpio
@@ -99,13 +129,15 @@ cover:
     stop_action:
       - switch.turn_off: relay_1
       - switch.turn_off: relay_2
+      - delay: 500ms
+      - component.update: power_sensor
 
 number:
   - platform: template
     id: open_duration
     name: Open Duration (Seconds)
     optimistic: true
-    initial_value: 60
+    initial_value: 90
     min_value: 5
     max_value: 1200
     step: 5
@@ -114,7 +146,7 @@ number:
     id: hold_duration
     name: Hold Duration (Mins)
     optimistic: true
-    initial_value: 60
+    initial_value: 90
     min_value: 5
     max_value: 360
     step: 1
@@ -139,8 +171,18 @@ script:
       - delay: !lambda 'return id(hold_duration).state * 60 * 1000;' 
       - cover.close: gate
 
+interval:
+  - interval: 250ms
+    then:
+      - if:
+          condition:
+            lambda: 'return id(gate).current_operation != CoverOperation::COVER_OPERATION_IDLE;'
+          then:
+            - component.update: power_sensor
+
 # Enable logging
 logger:
+  level: DEBUG
 
 # Enable Home Assistant API
 api:

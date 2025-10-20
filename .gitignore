@@ -7,3 +7,6 @@
 .esphome/idedata/*
 
 .esphome/*
+components/*/__pycache__/*
+
+

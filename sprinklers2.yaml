@@ -1,0 +1,850 @@
+substitutions:
+  name: "sprinklers2"
+  friendly_name: "Sprinklers 2.0"
+  device_description: "Makerfabs MaTouch ESP32-S3 RotaryIPS Display 1.28 GC9A01"
+  project_name: "Makerfabs.MaTouch-ESP32-S3-RotaryIPS-Display1_28-GC9A01"
+  project_version: "1.0.0"
+
+external_components:
+  - source: components
+
+esphome:
+  name: "${name}"
+  friendly_name: "${friendly_name}"
+  project:
+    name: "${project_name}"
+    version: "${project_version}"
+  min_version: 2024.11.0
+  name_add_mac_suffix: false
+  platformio_options:
+    board_build.flash_mode: dio
+    board_build.arduino.memory_type: qio_opi
+    build_flags: "-DBOARD_HAS_PSRAM"
+    board_upload.maximum_ram_size: 524288
+  on_boot:
+    priority: 600
+    then:
+      - delay: 2s
+      - lvgl.widget.hide: boot_screen
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    version: recommended
+    sdkconfig_options:
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: y
+      CONFIG_ESP32S3_DATA_CACHE_64KB: y
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS: y
+      CONFIG_SPIRAM_RODATA: y
+psram:
+  speed: 80MHz
+  mode: octal
+
+# Enable logging
+logger:
+  level: DEBUG 
+
+debug:
+  update_interval: 30s
+
+# Enable Home Assistant API
+api:
+
+ota:
+  - platform: esphome
+
+mdns:
+  disabled: false
+  
+wifi:
+  ssid: TooManyComp
+  password: BigBasement
+  power_save_mode: NONE
+#  output_power: 16dB
+  fast_connect: true
+
+captive_portal:
+
+web_server:
+      
+# --------------------------------------
+# -            HARDWARE                -
+# --------------------------------------
+
+i2c:
+  - id: i2c_bus
+    sda: 17
+    scl: 18
+    scan: true
+    frequency: 400kHz
+
+  - id: i2c_touch
+    sda: 38
+    scl: 39
+    scan: true
+    frequency: 400kHz
+  
+
+spi:
+  id: spi_bus
+  mosi_pin: GPIO13
+  clk_pin: GPIO14
+
+pcf8574:
+  - id: relays
+    i2c_id: i2c_bus
+    address: 0x21
+    pcf8575: true
+
+output:
+  # - platform: ledc
+  #   pin: GPIO3
+  #   id: buzzer
+  - platform: ledc
+    pin: GPIO7
+    id: backlight_output
+# --------------------------------------
+# -            DISPLAY                 -
+# --------------------------------------
+display:
+  - platform: ili9xxx
+    id: round_display
+    model: GC9A01A
+    cs_pin: GPIO15
+    reset_pin: GPIO11
+    dc_pin: GPIO21
+    invert_colors: true
+    auto_clear_enabled: false
+    color_order: bgr
+
+touchscreen:
+  platform: cst816
+  id: touch
+  interrupt_pin: GPIO40
+  reset_pin: GPIO16
+  i2c_id: i2c_touch
+  on_touch:
+    - if:
+        condition: lvgl.is_paused
+        then:
+          - logger.log: "LVGL resuming"
+          - lvgl.resume:
+          - lvgl.widget.redraw:
+    - light.turn_on: 
+        id: display_backlight
+        brightness: 100%
+
+# --------------------------------------
+# -            GUI                     -
+# --------------------------------------
+font:
+  - file: "gfonts://Roboto"
+    id: roboto24
+    size: 24
+    bpp: 4
+    glyphsets: GF_Latin_Core
+  - file: "gfonts://Roboto"
+    id: roboto32
+    size: 32
+    bpp: 4
+    glyphsets: GF_Latin_Core
+  - file: "gfonts://Roboto"
+    id: roboto48
+    size: 48
+    bpp: 4
+    glyphsets: GF_Latin_Core
+  - file: "gfonts://Roboto"
+    id: roboto64
+    size: 64
+    bpp: 4
+    glyphsets: GF_Latin_Core
+image:
+  - file: img/watering-can.png
+    id: boot_logo
+    resize: 200x200
+    type: RGB565
+    transparency: opaque
+
+lvgl:
+  displays:
+    - round_display
+  touchscreens:
+    - touch
+#  encoders:
+#    enter_button: front_button
+  on_idle:
+    timeout: !lambda "return (id(display_timeout).state * 1000);"
+    then:
+    - logger.log: "LVGL is idle"
+    - light.turn_on: 
+        id: display_backlight
+        brightness: 40%
+    #- lvgl.pause:
+  default_font: roboto32
+  top_layer:
+    widgets:
+      - obj:
+          id: main_screen
+          x: 0
+          y: 0
+          width: 100%
+          height: 100%
+          bg_color: black
+          text_color: aliceblue
+          bg_opa: COVER
+          radius: 0
+          pad_all: 0
+          border_width: 0
+          widgets:
+            - meter:
+                align: center
+                pad_all: 0
+                border_width: 0
+                bg_opa: 0%
+                bg_color: black
+                text_color: aliceblue
+                width: 100%
+                height: 100%
+                scales:
+                  range_from: 0
+                  range_to: 100
+                  angle_range: 240
+                  rotation: 150
+                  ticks:
+                    count: 21
+                    length: 24
+                    width: 1
+                  indicators:
+                    - arc:
+                        id: level_arc
+                        width: 24
+                        start_value: 0
+                        end_value: 100
+                        r_mod: -2
+                        opa: 80%
+                        color: aqua
+                    - tick_style:
+                        start_value: 0
+                        end_value: 100
+                        local: false
+                        color_start: darkorange
+                        color_end: blue
+            - obj:
+                id: mode_0
+                x: 0
+                y: 0
+                width: 100%
+                height: 100%
+                bg_color: black
+                text_color: aliceblue
+                bg_opa: TRANSP
+                radius: 0
+                pad_all: 0
+                border_width: 0
+                widgets:
+                  - label:
+                      pad_all: 0
+                      border_width: 0
+                      id: volume_lbl
+                      align: CENTER
+                      y: -10
+                      text_font: roboto48
+                      text_color: green
+            - obj:
+                id: mode_1
+                x: 0
+                y: 0
+                width: 100%
+                height: 100%
+                bg_color: black
+                text_color: aliceblue
+                bg_opa: TRANSP
+                radius: 0
+                pad_all: 0
+                border_width: 0
+                widgets:
+                  - roller:
+                      id: source_roller
+                      align: center
+                      text_font: roboto32
+                      text_color: aliceblue
+                      pad_all: 0
+                      border_width: 0
+                      # max_height: 72
+                      bg_opa: TRANSP
+                      bg_color: black
+                      mode: INFINITE
+                      options:
+                        - "Hose"
+                        - "Garden"
+                        - "Front"
+                        - "Fence"
+                        - "Back"
+                        - "Hose (M)"
+                        - "Garden (M)"
+                        - "Front (M)"
+                        - "Fence (M)"
+                        - "Back (M)"
+                      selected_index: 0
+                      visible_row_count: 3
+            - obj:
+                id: mode_2
+                x: 0
+                y: 0
+                width: 100%
+                height: 100%
+                bg_color: black
+                text_color: aliceblue
+                bg_opa: TRANSP
+                radius: 0
+                pad_all: 0
+                border_width: 0
+                widgets:
+                  - roller:
+                      id: time_roller
+                      align: center
+                      text_font: roboto32
+                      text_color: aliceblue
+                      pad_all: 0
+                      border_width: 0
+                      # max_height: 72
+                      bg_opa: 0%
+                      bg_color: black
+                      mode: INFINITE
+                      options:
+                        - "5"
+                        - "10"
+                        - "15"
+                        - "20"
+                        - "30"
+                        - "45"
+                        - "60"
+                        - "90"
+                        - "120"
+                      selected_index: 2
+            - obj:
+                id: mode_3
+                x: 0
+                y: 0
+                width: 100%
+                height: 100%
+                bg_color: black
+                text_color: aliceblue
+                bg_opa: TRANSP
+                radius: 0
+                pad_all: 0
+                border_width: 0
+                widgets:
+                  - label:
+                      pad_all: 0
+                      border_width: 0
+                      id: valve_lbl
+                      align: CENTER
+                      y: -30
+                      text_font: roboto48
+                      text_color: green
+                  - label:
+                      pad_all: 0
+                      border_width: 0
+                      id: elapsed_lbl
+                      align: CENTER
+                      y: 10
+                      text_font: roboto48
+                      text_color: darkorange
+
+            - label:
+                pad_all: 0
+                border_width: 0
+                id: status_lbl
+                align: BOTTOM_MID
+                y: -10
+                text_font: roboto24
+                text_color: red
+
+      # make sure it's the last one in this list:
+      - obj:
+          id: boot_screen
+          x: 0
+          y: 0
+          width: 100%
+          height: 100%
+          bg_color: black
+          bg_opa: COVER
+          radius: 0
+          pad_all: 0
+          border_width: 0
+          widgets:
+            - image:
+                align: CENTER
+                src: boot_logo
+                y: -40
+          on_press:
+            - lvgl.widget.hide: boot_screen
+  
+
+# --------------------------------------
+# -            SENSORS                 -
+# --------------------------------------
+
+uart:
+  id: uartA
+  rx_pin: GPIO4
+  tx_pin: GPIO5
+  baud_rate: 9600
+
+
+sensor:
+
+  - platform: "jsn_sr04t"
+    id: tanklevel
+    model: "aj_sr04m"
+    uart_id: uartA
+    name: "Tank Sensor"
+    filters:
+      - sliding_window_moving_average:
+          window_size: 15
+          send_every: 15
+
+  - platform: template
+    id: capacity
+    name: "Capacity"
+    state_class: "measurement"
+    unit_of_measurement: "lt"
+    lambda: |-
+      return (double)2400;
+
+  - platform: template
+    id: switch_mains_level
+    name: "Switch Mains Level"
+    state_class: "measurement"
+    unit_of_measurement: "lt"
+    lambda: |-
+      return (double)100;
+
+  - platform: copy
+    source_id: tanklevel
+    id: volume
+    name: "TankLevel"
+    state_class: "measurement"
+    unit_of_measurement: "lt"
+    filters:
+      - lambda: |-
+          double depth = x;
+          if (isnan(depth))
+            return 0.0;
+          auto empty = 1740.0; // mm
+          auto unit = 15.0;  // lt/cm
+          depth *= 1000;
+          if (depth > empty)
+            depth = empty;
+          return (double)((int)((empty - depth) * unit / 100) * 10);
+      - round: 0
+
+  - platform: copy # Reports the WiFi signal strength in %
+    id: level_percent
+    source_id: volume
+    name: "TankLevel Percent"
+    state_class: "measurement"
+    unit_of_measurement: "%"
+    filters:
+      - lambda: return x / 24;
+      - round: 0
+
+  - platform: uptime
+    name: "Uptime Sensor"
+    id: uptime_sensor
+    type:
+      timestamp
+    entity_category: "diagnostic"
+
+  - platform: wifi_signal # Reports the WiFi signal strength/RSSI in dB
+    name: "WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+
+  - platform: copy # Reports the WiFi signal strength in %
+    source_id: wifi_signal_db
+    name: "WiFi Signal Percent"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "Signal %"
+    entity_category: "diagnostic"
+    device_class: ""
+
+  - platform: rotary_encoder
+    id: encoder
+    pin_a: GPIO9
+    pin_b: GPIO10
+    resolution: 2
+    min_value: 0
+    max_value: 100
+    on_clockwise:
+      - if:
+          condition: 
+            lambda: 'return id(mode).active_index() == 1;'
+          then:
+            - select.operation:
+                id: source
+                operation: next
+                cycle: true
+      - if:
+          condition: 
+            lambda: 'return id(mode).active_index() == 2;'
+          then:
+            - select.operation:
+                id: runtime
+                operation: next
+                cycle: true
+
+    on_anticlockwise:
+      - if:
+          condition: 
+            lambda: 'return id(mode).active_index() == 1;'
+          then:
+            - select.operation:
+                id: source
+                operation: previous
+                cycle: true
+      - if:
+          condition: 
+            lambda: 'return id(mode).active_index() == 2;'
+          then:
+            - select.operation:
+                id: runtime
+                operation: previous
+                cycle: true
+
+binary_sensor:
+  - platform: gpio
+    name: Button
+    id: front_button
+    pin: 
+      number: GPIO6
+      inverted: True
+    on_multi_click:
+    - timing:
+        - ON for at most 1s
+        - OFF for at most 1s
+        - ON for at most 1s
+        - OFF for at least 0.2s
+      then:
+        - select.set_index:
+            id: source
+            index: 0
+        - select.set_index:
+            id: runtime
+            index: 2
+        - select.set_index:
+            id: mode
+            index: 3
+    - timing:
+        - ON for at most 1s
+        - OFF for at least 0.25s
+      then:
+        - select.operation:
+            id: mode
+            operation: next
+            cycle: true
+    - timing:
+        - ON for at least 2s
+      then:
+        - select.set_index:
+            id: mode
+            index: 0
+
+select:
+  - platform: lvgl
+    widget: source_roller
+    name: "Source"
+    id: source
+
+  - platform: lvgl
+    widget: time_roller
+    name: "Time"
+    id: runtime
+
+  - platform: template
+    id: mode
+    name: "Mode"
+    optimistic: true
+    options:
+      - 'Idle'
+      - 'Source'
+      - 'Time'
+      - 'Running'
+    initial_option: 'Idle'
+    on_value: 
+      then:
+        - lvgl.widget.update:
+            id: mode_0
+            hidden: !lambda 'return i != 0;'
+        - lvgl.widget.update: 
+            id: mode_1
+            hidden: !lambda 'return i != 1;'
+        - lvgl.widget.update:
+            id: mode_2
+            hidden: !lambda 'return i != 2;'
+        - lvgl.widget.update:
+            id: mode_3
+            hidden: !lambda 'return i != 3;'
+        - lvgl.label.update:
+            id: status_lbl
+            text: 
+              format: "%s"
+              args: [x.c_str()]
+        - if:
+            condition:
+              lambda: 'return i == 0;'
+            then:
+              - sprinkler.shutdown: sprinklers
+        - if:
+            condition:
+              lambda: 'return i == 3;'
+            then:
+              - if:
+                  condition: 
+                    lambda: 'return id(sprinklers).active_valve().has_value();'
+                  else:
+                    - sprinkler.start_single_valve:
+                        id: sprinklers
+                        valve_number: !lambda 'return id(source).active_index().value();'
+                        run_duration: !lambda 'return atoi(id(runtime).state.c_str()) * 60;'
+
+button:
+  - platform: template
+    id: runOnce
+    name: "Run"
+    on_press:
+      - if:
+          condition:
+            lambda: 'return id(sprinklers).active_valve().has_value();'
+          then:
+            - sprinkler.shutdown: sprinklers
+          else:      
+            - sprinkler.start_single_valve: 
+                id: sprinklers
+                valve_number: !lambda 'return id(source).active_index().value();'
+                run_duration: !lambda 'return atoi(id(runtime).state.c_str()) * 60;'
+        
+
+
+switch:
+  - platform: gpio
+    id: pump
+    pin:
+      pcf8574: relays
+      number: 0
+      inverted: true
+    interlock: [mains]
+  - platform: gpio
+    id: mains
+    pin:
+      pcf8574: relays
+      number: 1
+      inverted: true
+    interlock: [pump]
+  - platform: gpio
+    id: hose
+    pin:
+      pcf8574: relays
+      number: 2
+      inverted: true
+  - platform: gpio
+    id: garden
+    pin:
+      pcf8574: relays
+      number: 3
+      inverted: true
+  - platform: gpio
+    id: front
+    pin:
+      pcf8574: relays
+      number: 4
+      inverted: true
+  - platform: gpio
+    id: fence
+    pin:
+      pcf8574: relays
+      number: 5
+      inverted: true
+  - platform: gpio
+    id: back
+    pin:
+      pcf8574: relays
+      number: 6
+      inverted: true
+  - platform: gpio
+    id: empty2
+    pin:
+      pcf8574: relays
+      number: 7
+      inverted: true
+
+sprinkler:
+  - id: sprinklers
+    auto_advance_switch: 0
+    main_switch: 
+      name: "Sprinklers"
+      id: main_switch
+      on_turn_off:
+        - select.set_index: 
+            id: mode
+            index: 0
+      on_turn_on:
+        - component.update: valve_name
+        - lvgl.label.update:
+            id: valve_lbl
+            text: !lambda return id(valve_name).state;
+        - component.update: time_remaining
+        - lvgl.label.update:
+            id: elapsed_lbl
+            text: !lambda return id(time_remaining).state;
+        - select.set_index:
+            id: mode
+            index: 3
+    valve_overlap: 1s
+    pump_start_valve_delay: 1s
+    valves:
+      - valve_switch: "Hose"
+        valve_switch_id: hose
+        pump_switch_id: pump
+        run_duration: 900s
+      - valve_switch: "Garden"
+        valve_switch_id: garden
+        pump_switch_id: pump
+        run_duration: 900s
+      - valve_switch: "Front"
+        valve_switch_id: front
+        pump_switch_id: pump
+        run_duration: 900s
+      - valve_switch: "Back"
+        valve_switch_id: back
+        pump_switch_id: pump
+        run_duration: 900s
+      - valve_switch: "Hose M"
+        valve_switch_id: hose
+        pump_switch_id: mains
+        run_duration: 900s
+      - valve_switch: "Garden M"
+        valve_switch_id: garden
+        pump_switch_id: mains
+        run_duration: 900s
+      - valve_switch: "Front M"
+        valve_switch_id: front
+        pump_switch_id: mains
+        run_duration: 900s
+      - valve_switch: "Back M"
+        valve_switch_id: back
+        pump_switch_id: mains
+        run_duration: 900s
+
+interval:
+  - interval: 1s
+    startup_delay: 5s
+    then:
+      - component.update: tanklevel
+      - lvgl.indicator.update:
+          id: level_arc
+          start_value: 0
+          end_value: !lambda 'return id(level_percent).state;'
+      - lvgl.label.update:
+          id: volume_lbl
+          text:
+            format: "%0.0f lt"
+            args: [ 'id(volume).state' ]
+      - if:
+          condition: 
+            lambda: 'return id(sprinklers).active_valve().has_value();'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(volume).state < id(switch_mains_level).state;'
+                then:
+                  - switch.turn_on: mains
+            - component.update: time_remaining
+            - lvgl.label.update:
+                id: elapsed_lbl
+                text: !lambda return id(time_remaining).state;
+
+text_sensor:
+  - platform: template
+    id: time_remaining
+    lambda: |-
+      if (!id(sprinklers).active_valve().has_value())
+        return { "00:00" };
+      auto remaining = id(sprinklers).time_remaining_active_valve().value();
+      char buf[8];
+      sprintf(buf, "%d:%02d", remaining / 60, remaining % 60);
+      std::string result(buf);
+      return result;
+
+  - platform: template
+    id: valve_name
+    lambda: |-
+      if (!id(sprinklers).active_valve().has_value())
+        return { "" };
+      auto active = id(sprinklers).active_valve().value();
+      auto name = id(sprinklers).valve_name(active);
+      std::string result(name);
+      return result;
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+    on_time:
+      - minutes: '*'
+        seconds: 0/1
+        then:
+          - script.execute: time_update
+    on_time_sync:
+      then:
+        - script.execute: time_update
+  - platform: sntp
+    id: sntp_time
+  # Define the timezone of the device
+    timezone: ""
+  # Change sync interval from default 5min to 6 hours (or as set in substitutions)
+    update_interval: 6h
+  # Set specific sntp servers to use
+    servers:
+      - "0.pool.ntp.org"
+      - "1.pool.ntp.org"
+      - "2.pool.ntp.org"
+  # Publish the time the device was last restarted
+
+script:
+  - id: time_update
+    then:
+      - if:
+          condition: lvgl.is_paused
+          then:
+            - lvgl.resume:
+            - lvgl.widget.redraw:
+      # - lvgl.label.update:
+      #     id: label_time
+      #     text: !lambda |-
+      #       auto time = id(sntp_time).now();
+      #       return time.strftime("%H:%M:%S");
+
+number:
+  - platform: template
+    name: Screen timeout
+    optimistic: true
+    id: display_timeout
+    unit_of_measurement: "s"
+    initial_value: 45
+    restore_value: true
+    min_value: 10
+    max_value: 180
+    step: 5
+    mode: slider
+
+light:
+  - platform: monochromatic
+    name: "Backlight"
+    output: backlight_output
+    id: display_backlight
+    restore_mode: ALWAYS_ON
