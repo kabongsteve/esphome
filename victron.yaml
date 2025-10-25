@@ -63,6 +63,18 @@ sensor:
     id: shunt_STATE_OF_CHARGE
     type: STATE_OF_CHARGE
 
+  - platform: dht
+    pin: 9
+    model: DHT11
+    id: dht_sensor
+    temperature:
+      id: temp
+      name: "Temperature"
+    humidity:
+      id: humidity
+      name: "Humidity"
+#    update_interval: 60s
+
 text_sensor:
   - platform: template
     internal: true
@@ -154,14 +166,14 @@ font:
     file: "gfonts://Roboto"
     size: 48
     glyphs:
-      ['%', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', 'L', 'O', 'W']
+      ['%', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '.', 'L', 'O', 'W', 'C', 'n', 'a', '°', '?']
 
   - id: font_value
     # file: https://github.com/hprobotic/Google-Sans-Font/raw/refs/heads/master/GoogleSans-Medium.ttf
     file: "gfonts://Roboto"
-    size: 12
+    size: 14
     glyphs:
-      ['&', '@', '!', ',', '.', '"', '%', '(', ')', '+', '-', '_', ':', '°', ' ', '/', '>', '<', '=',
+      ['&', '@', '!', ',', '.', '"', '%', '(', ')', '+', '-', '_', ':', '°', ' ', '/', '>', '<', '=', '?',
        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 
        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
@@ -200,10 +212,24 @@ font:
       - "\U000F0085" # mdi-battery-charging-100
       - "\U000F07C3" # mdi-dots-horizontal-circle
       - "\U000F1425" # mdi-power-plug-outline
+      - "\U000F058E" # mdi-water-percent
 
 
 interval:
-  - interval: 2500ms
+  # - interval: 2500ms
+  #   then:
+  #     - component.update: shunt_TIME_TO_GO_text
+  #     - component.update: shunt_STATE_OF_CHARGE_symbol
+  #     - if:
+  #         condition:
+  #           lambda: 'return (id(shunt_STATE_OF_CHARGE).state < 15.0);'
+  #         then:
+  #           - display.page.show_next: my_display
+  #         else:
+  #           - display.page.show: main_page
+  #     - component.update: my_display
+
+  - interval: 5000ms
     then:
       - component.update: shunt_TIME_TO_GO_text
       - component.update: shunt_STATE_OF_CHARGE_symbol
@@ -211,10 +237,19 @@ interval:
           condition:
             lambda: 'return (id(shunt_STATE_OF_CHARGE).state < 15.0);'
           then:
-            - display.page.show_next: my_display
+            - display.page.show: low_batt
           else:
             - display.page.show: main_page
       - component.update: my_display
+      - component.update: dht_sensor
+      - if:
+          condition:
+            lambda: 'return std::isnan(id(temp).state);'
+          else:
+            - delay: 2500ms
+            - display.page.show: temp_page
+            - component.update: my_display
+
 
 display:
   - platform: ssd1306_i2c
@@ -281,3 +316,9 @@ display:
         lambda: |-
           it.printf(1, 40, id(font_large), TextAlign::BASELINE_LEFT, " LOW");
           it.printf(1, 60, id(font_value), TextAlign::BASELINE_LEFT, "%.0f%% %s", id(shunt_STATE_OF_CHARGE).state, id(shunt_TIME_TO_GO_text).state.c_str());
+      - id: temp_page
+        lambda: |-
+          it.printf(1, 40, id(font_large), TextAlign::BASELINE_LEFT, " %.0f°", id(temp).state);
+          it.printf(16, 62, id(font_icons_small), TextAlign::BASELINE_CENTER, "\U000F058E");  // mdi-water-percent
+          it.printf(30, 60, id(font_value), TextAlign::BASELINE_LEFT, "%.0f %%", id(humidity).state);
+

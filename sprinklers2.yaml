@@ -639,6 +639,7 @@ switch:
       number: 0
       inverted: true
     interlock: [mains]
+    internal: true
   - platform: gpio
     id: mains
     pin:
@@ -646,46 +647,56 @@ switch:
       number: 1
       inverted: true
     interlock: [pump]
+    internal: true
   - platform: gpio
     id: hose
     pin:
       pcf8574: relays
       number: 2
       inverted: true
+    internal: true
   - platform: gpio
     id: garden
     pin:
       pcf8574: relays
       number: 3
       inverted: true
+    internal: true
   - platform: gpio
     id: front
     pin:
       pcf8574: relays
       number: 4
       inverted: true
+    internal: true
   - platform: gpio
     id: fence
     pin:
       pcf8574: relays
       number: 5
       inverted: true
+    internal: true
   - platform: gpio
     id: back
     pin:
       pcf8574: relays
       number: 6
       inverted: true
+    internal: true
   - platform: gpio
     id: empty2
     pin:
       pcf8574: relays
       number: 7
       inverted: true
+    internal: true
+  - platform: template
+    id: advance
+    internal: True
 
 sprinkler:
   - id: sprinklers
-    auto_advance_switch: 0
+    auto_advance_switch: advance
     main_switch: 
       name: "Sprinklers"
       id: main_switch
