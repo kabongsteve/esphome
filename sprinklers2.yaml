@@ -170,8 +170,8 @@ image:
 lvgl:
   displays:
     - round_display
-  touchscreens:
-    - touch
+#  touchscreens:
+#    - touch
 #  encoders:
 #    enter_button: front_button
   on_idle:
@@ -280,12 +280,10 @@ lvgl:
                         - "Hose"
                         - "Garden"
                         - "Front"
-                        - "Fence"
                         - "Back"
                         - "Hose (M)"
                         - "Garden (M)"
                         - "Front (M)"
-                        - "Fence (M)"
                         - "Back (M)"
                       selected_index: 0
                       visible_row_count: 3
@@ -363,6 +361,26 @@ lvgl:
                 text_font: roboto24
                 text_color: red
 
+      - obj:
+          id: block_touch
+          x: 0
+          y: 0
+          width: 100%
+          height: 100%
+          bg_color: black
+          bg_opa: TRANSP
+          radius: 0
+          pad_all: 0
+          border_width: 0
+          widgets:
+            - label:
+                x: 0
+                y: 0
+                width: 100%
+                height: 100%
+                bg_color: black
+                bg_opa: TRANSP
+                text: ""
       # make sure it's the last one in this list:
       - obj:
           id: boot_screen
@@ -389,18 +407,15 @@ lvgl:
 # --------------------------------------
 
 uart:
-  id: uartA
-  rx_pin: GPIO4
-  tx_pin: GPIO5
+  rx_pin: GPIO44
+  tx_pin: GPIO43
   baud_rate: 9600
-
 
 sensor:
 
   - platform: "jsn_sr04t"
     id: tanklevel
     model: "aj_sr04m"
-    uart_id: uartA
     name: "Tank Sensor"
     filters:
       - sliding_window_moving_average:
@@ -452,13 +467,6 @@ sensor:
       - lambda: return x / 24;
       - round: 0
 
-  - platform: uptime
-    name: "Uptime Sensor"
-    id: uptime_sensor
-    type:
-      timestamp
-    entity_category: "diagnostic"
-
   - platform: wifi_signal # Reports the WiFi signal strength/RSSI in dB
     name: "WiFi Signal dB"
     id: wifi_signal_db
@@ -484,6 +492,20 @@ sensor:
     on_clockwise:
       - if:
           condition: 
+            lambda: 'return id(mode).active_index() == 0;'
+          then:
+            - select.set_index:
+                id: source
+                index: 0
+            - select.set_index:
+                id: runtime
+                index: 2
+            - select.operation:
+                id: mode
+                operation: next
+                cycle: true
+      - if:
+          condition: 
             lambda: 'return id(mode).active_index() == 1;'
           then:
             - select.operation:
@@ -500,6 +522,20 @@ sensor:
                 cycle: true
 
     on_anticlockwise:
+      - if:
+          condition: 
+            lambda: 'return id(mode).active_index() == 0;'
+          then:
+            - select.set_index:
+                id: source
+                index: 0
+            - select.set_index:
+                id: runtime
+                index: 2
+            - select.operation:
+                id: mode
+                operation: next
+                cycle: true
       - if:
           condition: 
             lambda: 'return id(mode).active_index() == 1;'
@@ -542,8 +578,18 @@ binary_sensor:
             index: 3
     - timing:
         - ON for at most 1s
-        - OFF for at least 0.25s
+        - OFF for at least 0.1s
       then:
+        - if:
+            condition: 
+              lambda: 'return id(mode).active_index() == 0;'
+            then:
+              - select.set_index:
+                  id: source
+                  index: 0
+              - select.set_index:
+                  id: runtime
+                  index: 2
         - select.operation:
             id: mode
             operation: next
@@ -636,7 +682,7 @@ switch:
     id: pump
     pin:
       pcf8574: relays
-      number: 0
+      number: 7
       inverted: true
     interlock: [mains]
     internal: true
@@ -644,7 +690,7 @@ switch:
     id: mains
     pin:
       pcf8574: relays
-      number: 1
+      number: 6
       inverted: true
     interlock: [pump]
     internal: true
@@ -652,47 +698,48 @@ switch:
     id: hose
     pin:
       pcf8574: relays
-      number: 2
+      number: 5
       inverted: true
     internal: true
   - platform: gpio
     id: garden
     pin:
       pcf8574: relays
-      number: 3
+      number: 4
       inverted: true
     internal: true
   - platform: gpio
     id: front
     pin:
       pcf8574: relays
-      number: 4
+      number: 3
       inverted: true
     internal: true
   - platform: gpio
     id: fence
     pin:
       pcf8574: relays
-      number: 5
+      number: 2
       inverted: true
     internal: true
   - platform: gpio
     id: back
     pin:
       pcf8574: relays
-      number: 6
+      number: 1
       inverted: true
     internal: true
   - platform: gpio
     id: empty2
     pin:
       pcf8574: relays
-      number: 7
+      number: 0
       inverted: true
     internal: true
   - platform: template
     id: advance
-    internal: True
+    internal: true
+    optimistic: true
 
 sprinkler:
   - id: sprinklers
@@ -718,6 +765,7 @@ sprinkler:
             index: 3
     valve_overlap: 1s
     pump_start_valve_delay: 1s
+    pump_stop_valve_delay: 1s
     valves:
       - valve_switch: "Hose"
         valve_switch_id: hose
@@ -802,43 +850,6 @@ text_sensor:
       std::string result(name);
       return result;
 
-time:
-  - platform: homeassistant
-    id: homeassistant_time
-    on_time:
-      - minutes: '*'
-        seconds: 0/1
-        then:
-          - script.execute: time_update
-    on_time_sync:
-      then:
-        - script.execute: time_update
-  - platform: sntp
-    id: sntp_time
-  # Define the timezone of the device
-    timezone: ""
-  # Change sync interval from default 5min to 6 hours (or as set in substitutions)
-    update_interval: 6h
-  # Set specific sntp servers to use
-    servers:
-      - "0.pool.ntp.org"
-      - "1.pool.ntp.org"
-      - "2.pool.ntp.org"
-  # Publish the time the device was last restarted
-
-script:
-  - id: time_update
-    then:
-      - if:
-          condition: lvgl.is_paused
-          then:
-            - lvgl.resume:
-            - lvgl.widget.redraw:
-      # - lvgl.label.update:
-      #     id: label_time
-      #     text: !lambda |-
-      #       auto time = id(sntp_time).now();
-      #       return time.strftime("%H:%M:%S");
 
 number:
   - platform: template
