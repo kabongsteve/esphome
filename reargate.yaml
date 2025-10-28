@@ -26,7 +26,7 @@ sensor:
       name: "Power"
       id: gate_power
       on_value_range:
-        - above: 8
+        - above: 9.5
           then:
             if:
               condition: 
@@ -139,7 +139,7 @@ number:
     optimistic: true
     initial_value: 90
     min_value: 5
-    max_value: 1200
+    max_value: 600
     step: 5
 
   - platform: template
