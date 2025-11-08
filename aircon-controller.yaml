@@ -1,6 +1,8 @@
 esphome:
   name: accontroller
   friendly_name: Aircon Controller
+  includes:
+    - <sstream>
 
 esp32:
   board: esp32dev
@@ -36,6 +38,24 @@ number:
     max_value: 5
     step: 1
     initial_value: -2
+    restore_value: true
+  - platform: template
+    id: heat_offset
+    name: Heat Offset
+    optimistic: True
+    min_value: 0
+    max_value: 10
+    step: 1
+    initial_value: 4
+    restore_value: true
+  - platform: template
+    name: Cool Offset
+    id: cool_offset
+    optimistic: True
+    min_value: -10
+    max_value: 0
+    step: 1
+    initial_value: -4
     restore_value: true
 
 switch:
@@ -74,27 +94,312 @@ sensor:
   - platform: homeassistant
     id: lounge_temp
     entity_id: sensor.lounge_temp
-  
 
 climate:
   - platform: thermostat
+    id: ac
     name: "AC"
     sensor: house_temp
     min_cooling_off_time: 30s
     min_cooling_run_time: 30s
     min_heating_off_time: 30s
     min_heating_run_time: 30s
-    temperature_step: 0.1
+    cool_deadband: 0.5
+    cool_overrun: 0.5
+    heat_deadband: 0.5
+    heat_overrun: 0.5
+    # temperature_step: 0.1
     min_idle_time: 30s
     cool_action:
-      - switch.turn_on: dummy
+      - logger.log: Cooling Start
+      - script.execute: to_cooling
     heat_action:
-      - switch.turn_on: dummy
+      - logger.log: Heating Start
+      - script.execute: to_heating
     idle_action:
-      - switch.turn_off: dummy
-      - switch.turn_off: dummy
-    default_preset: Home
+      - logger.log: Idle Start
+      - script.execute: to_idle
+    off_mode:
+      - logger.log: Turned Off
+      - script.execute: turn_off
+    heat_mode:
+      - logger.log: Set to Heat
+      - script.execute: turn_on
+    cool_mode:
+      - logger.log: Set to Cool
+      - script.execute: turn_on
+    auto_mode:
+      - logger.log: Set to Auto
+      - script.execute: turn_on
+    preset_change:
+      - logger.log: Preset changed
+      - script.execute: mode_changed
+    target_temperature_change_action:
+      - logger.log: Target Temp changed
+      - script.execute: mode_changed
+
+    default_preset: Summer Day
     preset:
-      - name: Home
-        default_target_temperature_low: 20 °C
-        default_target_temperature_high: 22 °C
+      - name: Summer Day
+        default_target_temperature_low: 21.5 °C
+        default_target_temperature_high: 23 °C
+        mode: COOL
+      - name: Summer Night
+        default_target_temperature_low: 22.5 °C
+        default_target_temperature_high: 24 °C
+        mode: COOL
+      - name: Winter Day
+        default_target_temperature_low: 19.6 °C
+        default_target_temperature_high: 21 °C
+        mode: HEAT
+      - name: Winter Night
+        default_target_temperature_low: 18.5 °C
+        default_target_temperature_high: 21 °C
+        mode: HEAT
+
+script:
+  - id: turn_off
+    mode: single
+    then:
+      - logger.log: Turn Off Script
+#      - script.execute: check_daikin_info
+
+  - id: turn_on
+    mode: single
+    then:
+      - logger.log: Turn on Script
+#      - script.execute: check_daikin_info
+
+  - id: set_temp
+    then:
+      - logger.log: 
+          format: Set Temp %.1f %s
+          args: [ 'id(ac).target_temperature', 'climate_mode_to_string(id(ac).mode)' ]
+#      - script.execute: check_daikin_info
+
+  - id: to_heating
+    mode: single
+    then:
+      - logger.log: Set Heating
+#      - script.execute: set_temp
+
+  - id: to_cooling
+    mode: single
+    then:
+      - logger.log: Set Cooling
+#      - script.execute: set_temp
+
+  - id: to_idle
+    mode: single
+    then:
+      - logger.log: Set Idle
+#      - script.execute: check_daikin_info
+
+  - id: mode_changed
+    mode: single
+    then:
+      - logger.log: Something changed
+      - if:
+          condition:
+            lambda: 'return id(ac).action == CLIMATE_ACTION_HEATING;'
+          then:
+            - script.execute: to_heating
+          else:
+            - if:
+                condition:
+                  lambda: 'return id(ac).action == CLIMATE_ACTION_COOLING;'
+                then:
+                  - script.execute: to_cooling
+                else:
+                  - script.execute: to_idle
+
+
+# text_sensor:
+#   - platform: template
+#     id: daikin_setinfo
+#     internal: true
+#     lambda: |-
+#       char buf[80];
+#       double temp = id(ac).target_temperature;
+#       char mode = 0, pow = 1;
+#       if (id(ac).mode == CLIMATE_MODE_HEAT) {
+#         temp = id(ac).target_temperature_low + id(heat_offset).state;
+#         mode = 1;
+#       }
+#       else
+#       if (id(ac).mode == CLIMATE_MODE_COOL) {
+#         temp = id(ac).target_temperature_high + id(cool_offset).state;
+#         mode = 2;
+#       }
+#       if (id(ac).mode == CLIMATE_MODE_OFF) {
+#         pow = 0;
+#       }
+
+#       sprintf(buf, "?mode=%d&pow=%d&stemp=%.0f&f_rate=0&f_dir=0", mode, pow, temp);
+
+#       return std::string(buf);
+
+# http_request:
+#   timeout: 0.2s
+#   verify_ssl: false
+
+# mapping:
+#   - id: daikin
+#     from: string
+#     to: string
+#     entries:
+#       url: "http://192.168.12.184/skyfi/"
+
+
+# script:
+#   - id: turn_off
+#     mode: single
+#     then:
+#       - logger.log: Turn Off Script
+#       - script.execute: check_daikin_info
+
+#   - id: turn_on
+#     mode: single
+#     then:
+#       - logger.log: Turn on Script
+#       - script.execute: check_daikin_info
+
+#   - id: set_temp
+#     then:
+#       - logger.log: 
+#           format: Set Temp %.1f %s
+#           args: [ 'id(ac).target_temperature', 'climate_mode_to_string(id(ac).mode)' ]
+#       - script.execute: check_daikin_info
+
+#   - id: to_heating
+#     mode: single
+#     then:
+#       - logger.log: Set Heating
+#       - script.execute: set_temp
+
+#   - id: to_cooling
+#     mode: single
+#     then:
+#       - logger.log: Set Cooling
+#       - script.execute: set_temp
+
+#   - id: to_idle
+#     mode: single
+#     then:
+#       - logger.log: Set Idle
+#       - script.execute: check_daikin_info
+
+#   - id: mode_changed
+#     mode: single
+#     then:
+#       - logger.log: Something changed
+#       - if:
+#           condition:
+#             lambda: 'return id(ac).action == CLIMATE_ACTION_HEATING;'
+#           then:
+#             - script.execute: to_heating
+#           else:
+#             - if:
+#                 condition:
+#                   lambda: 'return id(ac).action == CLIMATE_ACTION_COOLING;'
+#                 then:
+#                   - script.execute: to_cooling
+#                 else:
+#                   - script.execute: to_idle
+#   - id: get_daikin_info
+#     mode: single
+#     then:
+#       - http_request.get:
+#           url: !lambda 'return std::string(id(daikin)["url"]) + "aircon/get_control_info";'
+#           capture_response: true
+#           on_response:
+#             then:
+#               - lambda: |-
+#                   std::stringstream ss(body);
+#                   std::string segment;
+
+#                   while (std::getline(ss, segment, ',')) {
+#                       size_t equals_pos = segment.find('=');
+#                       if (equals_pos != std::string::npos) {
+#                           std::string key = segment.substr(0, equals_pos);
+#                           std::string value = segment.substr(equals_pos + 1);
+#                           id(daikin).set(key, value);
+#                       }
+#                   }                
+#       - logger.log:
+#           format: "Pow=%s,Mode=%s,Temp=%s,Fan=%s"
+#           args: [ 'id(daikin)["pow"].c_str()', 'id(daikin)["mode"].c_str()', 'id(daikin)["stemp"].c_str()', 'id(daikin)["f_rate"].c_str()' ]
+#   - id: check_daikin_info
+#     mode: queued
+#     max_runs: 2
+#     then:
+#       - logger.log: Checking Daikin
+#       - http_request.get:
+#           url: !lambda 'return std::string(id(daikin)["url"]) + "aircon/get_control_info";'
+#           capture_response: true
+#           on_response:
+#             then:
+#               - lambda: |-
+#                   std::stringstream ss(body);
+#                   std::string segment;
+
+#                   while (std::getline(ss, segment, ',')) {
+#                       size_t equals_pos = segment.find('=');
+#                       if (equals_pos != std::string::npos) {
+#                           std::string key = segment.substr(0, equals_pos);
+#                           std::string value = segment.substr(equals_pos + 1);
+#                           id(daikin).set(key, value);
+#                       }
+#                   }
+#           on_error:
+#             - script.stop: check_daikin_info
+#       - if:
+#           condition:
+#             lambda: |-
+#               double temp = id(ac).target_temperature;
+#               char mode = 0, pow = 1;
+#               if (id(ac).mode == CLIMATE_MODE_HEAT) {
+#                 temp = id(ac).target_temperature_low + id(heat_offset).state;
+#                 mode = 1;
+#               }
+#               else
+#               if (id(ac).mode == CLIMATE_MODE_COOL) {
+#                 temp = id(ac).target_temperature_high + id(cool_offset).state;
+#                 mode = 2;
+#               }
+#               if (id(ac).mode == CLIMATE_MODE_OFF) {
+#                 pow = 0;
+#               }
+#               ESP_LOGD("custom", "p(%d,%c), m(%d, %c), t(%s,%f)", pow, id(daikin)["pow"][0], mode, id(daikin)["mode"][0], id(daikin)["stemp"].c_str(), floor(temp));
+#               return pow + '0' == id(daikin)["pow"][0] && ( pow == 0 || (mode + '0' == id(daikin)["mode"][0] && atof(id(daikin)["stemp"].c_str()) == floor(temp)));
+#           then:
+#             - logger.log: Daikin in sync          
+#           else:
+#             - http_request.get:
+#                 url: !lambda 'return id(daikin)["url"] + "aircon/set_control_info" + id(daikin_setinfo).state;'
+#                 capture_response: true
+#                 on_response:
+#                   then:
+#                     - lambda: |-
+#                         std::stringstream ss(body);
+#                         std::string segment;
+
+#                         while (std::getline(ss, segment, ',')) {
+#                             size_t equals_pos = segment.find('=');
+#                             if (equals_pos != std::string::npos) {
+#                                 std::string key = segment.substr(0, equals_pos);
+#                                 std::string value = segment.substr(equals_pos + 1);
+#                                 id(daikin).set(key, value);
+#                             }
+#                         }                
+#             - logger.log:
+#                 format: "Set Daikin %s for %s"
+#                 args: [ 'id(daikin)["ret"].c_str()', 'id(daikin_setinfo).state.c_str()' ]
+#             - delay: 5s
+#             - script.execute: check_daikin_info
+
+# interval:
+#   - interval: 15s
+#     startup_delay: 15s
+#     then:
+#       script.execute: check_daikin_info
