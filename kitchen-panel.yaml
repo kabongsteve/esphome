@@ -11,8 +11,6 @@ substitutions:
   # Indoor sensors
   indoor_temperature: sensor.kitchen_temp
   indoor_humidity: sensor.kitchen_panel_humidity
-
-web_server:
  
 esphome:
   name: ${device_id}
@@ -25,11 +23,14 @@ esphome:
       then:
         - delay: 10s
         - component.update: epaper_display
+  includes:
+    - <sstream>
+    - text_wrap.h
 
 esp32:
   board: az-delivery-devkit-v4
   framework:
-    type: arduino
+    type: esp-idf
 
 external_components:
   - source: github://Passific/m5paper_esphome
@@ -58,23 +59,22 @@ globals:
     restore_value: no
     initial_value: |
       {
-        {"mdi-weather-night", "󰖔"},
-        {"mdi-weather-cloudy", "󰖐"},
-        {"mdi-weather-cloudy-alert", "󰼯"},
-        {"mdi-weather-fog", "󰖑"},
-        {"mdi-weather-hail", "󰖒"},
-        {"mdi-weather-lightning-rainy", "󰙾"},
-        {"mdi-weather-lightning", "󰖓"},
-        {"mdi-weather-partly-cloudy", "󰖕"},
-        {"mdi-weather-night-partly-cloudy", "󰼱"},
-        {"mdi-weather-pouring", "󰖖"},
-        {"mdi-weather-rainy", "󰖗"},
-        {"mdi-weather-snowy-rainy", "󰙿"},
-        {"mdi-weather-snowy", "󰖘"},
-        {"mdi-weather-sunny", "󰖙"},
-        {"mdi-weather-windy-variant", "󰖞"},
-        {"mdi-weather-windy", "󰖝"},
-        {"mdi-cloud-question", "󰨹"},
+        {"mdi:weather-night", "󰖔"},
+        {"mdi:weather-cloudy", "󰖐"},
+        {"mdi:weather-cloudy-alert", "󰼯"},
+        {"mdi:weather-fog", "󰖑"},
+        {"mdi:weather-hail", "󰖒"},
+        {"mdi:weather-lightning-rainy", "󰙾"},
+        {"mdi:weather-lightning", "󰖓"},
+        {"mdi:weather-partly-cloudy", "󰖕"},
+        {"mdi:weather-night-partly-cloudy", "󰼱"},
+        {"mdi:weather-pouring", "󰖖"},
+        {"mdi:weather-rainy", "󰖗"},
+        {"mdi:weather-snowy-rainy", "󰙿"},
+        {"mdi:weather-snowy", "󰖘"},
+        {"mdi:weather-sunny", "󰖙"},
+        {"mdi:weather-windy-variant", "󰖞"},
+        {"mdi:weather-windy", "󰖝"},
         {"mdi-thermometer", "󰔏"},
         {"mdi-water-percent", "󰖎"},
         {"mdi-molecule-co2", "󰟤"},
@@ -112,15 +112,32 @@ globals:
 font:
   - file: 'gfonts://Roboto'
     id: normal_font
-    size: 56
-    glyphs: [
-        '󰶜',    # mdi-solar-panel-large
-        '󱤄',    # mdi-home-lightning-bolt-outline
-        '󰴾',    # mdi-transmission-tower
-      ]
+    size: 52
+
   - file: 'gfonts://Roboto'
     id: small_font
     size: 36
+  - file: 'gfonts://Roboto'
+    id: tiny_font
+    size: 26
+  - file: "fonts/materialdesignicons-webfont.ttf"
+    id: small_icons_font
+    size: 48
+    glyphs: [
+        '󰖖',    # mdi-weather-pouring
+        '󰔏',    # mdi-thermometer
+        '󰖎',    # mdi-water-percent
+        '󰟤',    # mdi-molecule-co2
+        '󱪉',    # mdi-wind-power-outline
+        '󰚡',    # mdi-home-outline
+        '󰹩',    # mdi-tree-outline
+        '󰊚',    # mdi-gauge
+        '󰶜',    # mdi-solar-panel-large
+        '󱤄',    # mdi-home-lightning-bolt-outline
+        '󰴾',    # mdi-transmission-tower
+        "\U000F1901", # mdi:home-battery
+        "\U000F12A5",     # mdi:battery-charging-medium
+      ]
   - file: "fonts/materialdesignicons-webfont.ttf"
     id: weather_font
     size: 196
@@ -170,64 +187,12 @@ display:
       Color weather_icon_color;
       weather_icon_color.raw_32 = 0x0D;
 
-      std::string conditions = id(weather_conditions).state;
+      std::string conditions = id(weather_icon).state;
 
-      std::string img = id(material_icons_map)["mdi-cloud-question"];
-      if (conditions == "clear-night")
-      {
-          conditions = "clear";
-          img = id(material_icons_map)["mdi-weather-night"];
-      }
-      else if (conditions == "cloudy")
-          img = id(material_icons_map)["mdi-weather-cloudy"];
-      else if (conditions == "exceptional")
-          img = id(material_icons_map)["mdi-weather-cloudy-alert"];
-      else if (conditions == "fog")
-          img = id(material_icons_map)["mdi-weather-fog"];
-      else if (conditions == "hail")
-          img = id(material_icons_map)["mdi-weather-hail"];
-      else if (conditions == "lightning-rainy")
-      {
-          conditions = "thunderstorm";
-          img = id(material_icons_map)["mdi-weather-lightning-rainy"];
-      }
-      else if (conditions == "lightning")
-          img = id(material_icons_map)["mdi-weather-lightning"];
-      else if (conditions == "partlycloudy")
-      {
-          bool is_night = id(sun_position).state == "below_horizon";
-          if (is_night)
-              img = id(material_icons_map)["mdi-weather-night-partly-cloudy"];
-          else
-              img = id(material_icons_map)["mdi-weather-partly-cloudy"];
-          conditions = "partly cloudy";
-      }
-      else if (conditions == "pouring")
-      {
-          img = id(material_icons_map)["mdi-weather-pouring"];
-          conditions = "shower";
-      }
-      else if (conditions == "rainy")
-          img = id(material_icons_map)["mdi-weather-rainy"];
-      else if (conditions == "snowy-rainy")
-      {
-          img = id(material_icons_map)["mdi-weather-snowy-rainy"];
-          conditions = "sleet";
-      }
-      else if (conditions == "snowy")
-          img = id(material_icons_map)["mdi-weather-snowy"];
-      else if (conditions == "sunny")
-          img = id(material_icons_map)["mdi-weather-sunny"];
-      else if (conditions == "windy")
-          img = id(material_icons_map)["mdi-weather-windy"];
-      else if (conditions == "windy-variant")
-      {
-          img = id(material_icons_map)["mdi-weather-windy-variant"];
-          conditions = "windy";
-      }
+      std::string img = id(material_icons_map)[conditions.c_str()];
 
       uint left = 24;
-      it.print(left / 2, 8, id(weather_font), weather_icon_color, img.c_str());
+      it.print(16, 8, id(weather_font), weather_icon_color, img.c_str());
 
       float value;
 
@@ -236,83 +201,91 @@ display:
 
       value = id(outdoor_temperature).state;
       if (NOT_NAN(value))
-        it.printf(left, 200, id(normal_font), "%.1f°C", value);
+        it.printf(left, 200, id(small_font), "%.1f°C (M %.1f)", value, id(max_temp).state);
       else
-        it.print(left, 200, id(normal_font), "---");
+        it.print(left, 200, id(small_font), "---");
+
+      value = id(kitchen_temp).state;
+      if (NOT_NAN(value))
+        it.printf(left, 245, id(small_font), "Inside %.1f°C", value);
+      else
+        it.print(left, 245, id(small_font), "---");
 
       value = id(rain_today).state;
       if (NOT_NAN(value))
-        it.printf(left, 260, id(small_font), "%.1f mm", value);
+        it.printf(left, 290, id(small_font), "%.1f mm (%.1f)", value, id(max_rain).state);
       else
-        it.print(left, 260, id(small_font), "---");
+        it.print(left, 290, id(small_font), "---");
 
       value = id(rain_rate).state;
       if (NOT_NAN(value))
-        it.printf(left, 300, id(small_font), "%.1f mm/h", value);
+        it.printf(left, 320, id(small_font), "%.1f mm/h", value);
       else
-        it.print(left, 300, id(small_font), "---");
+        it.print(left, 320, id(small_font), "---");
 
       value = id(tank_level).state;
+      float perc = value * 100 / 2200.0;
       if (NOT_NAN(value))
-        it.printf(left, 380, id(small_font), "%.0f lt", value);
-
-      value = value * 100 / 2200.0;
-      if (NOT_NAN(value))
-        it.printf(left, 440, id(small_font), "%.0f %", value);
+        it.printf(left, 380, id(small_font), "%.0f lt (%.0f%%)", value, perc);
 
 
+      uint col1 = 250;
+      uint col2 = 510;
 
-      uint col1 = 230;
-
-      it.graph(col1, 6, id(energy_graph));
+      wrap_text(&it, col1, 6, id(weather_desc).state.c_str(), id(tiny_font), TextAlign::TOP_LEFT, 1);
+      //it.graph(col1, 6, id(energy_graph));
 
 
       uint base_y = 320;
       uint rowgap = 70;
       uint gap = 60;
 
-
-      it.print(col1, base_y, id(normal_font), weather_icon_color, "\U000F0D9C");
+      it.print(col1, base_y, id(small_icons_font), weather_icon_color, "\U000F0D9C");
       value = id(solar_energy).state / 1000.;
       if (NOT_NAN(value))
         it.printf(col1 + gap, base_y, id(normal_font), "%.2f kW", value);
       else
         it.print(col1 + gap, base_y, id(normal_font), "---");
 
+      it.print(col2, base_y, id(small_icons_font), weather_icon_color, "\U000F12A5");
+      value = id(battery_level).state;
+      if (NOT_NAN(value))
+        it.printf(col2 + gap, base_y, id(normal_font), "%2.0f %%", value);
+      else
+        it.print(col2 + gap, base_y, id(normal_font), "---");
+
       base_y += rowgap;
-      it.print(col1, base_y, id(normal_font), weather_icon_color, "\U000F1904");
+      it.print(col1, base_y, id(small_icons_font), weather_icon_color, "\U000F1904");
       value = id(load_energy).state / 1000.;
       if (NOT_NAN(value))
         it.printf(col1 + gap, base_y, id(normal_font), "%.2f kW", value);
       else
         it.print(col1 + gap, base_y, id(normal_font), "---");
 
+      it.print(col2, base_y, id(small_icons_font), weather_icon_color, "\U000F1901");
+      value = id(battery_power).state / 1000.;
+      if (NOT_NAN(value))
+        it.printf(col2 + gap, base_y, id(normal_font), "%.2f kW", value);
+      else
+        it.print(col2 + gap, base_y, id(normal_font), "---");
+
+      base_y += 50;
+      conditions = id(ems_mode).state;
+      if (strncmp(conditions.c_str(), "Self", 4) == 0)
+        conditions = "Normal";
+      else {
+        conditions = id(battery_mode).state;
+        if (strncmp(conditions.c_str(), "Stop", 4) == 0)
+          conditions = "Battery Off";
+      }
+      it.print(col2 + gap, base_y, id(tiny_font), weather_icon_color, conditions.c_str());
+
+
 color:
   - id: weather_icon_color
     red: 100%
     blue: 100%
     green: 100%
-
-graph:
-  - id: energy_graph
-    duration: 4h
-    min_value: 0
-    max_value: 10000
-    width: 560
-    height: 300
-    x_grid: 1h
-    y_grid: 2000
-    border: false
-    traces:
-      - sensor: solar_energy
-        line_type: SOLID
-        line_thickness: 8
-        continuous: true
-        color: weather_icon_color
-      - sensor: load_energy
-        line_type: DASHED
-        line_thickness: 8
-        color: weather_icon_color
 
 
 switch:
@@ -330,10 +303,22 @@ sensor:
     name: Load Energy
     id: load_energy
     entity_id: sensor.load_power
+
   - platform: homeassistant
     name: Solar Energy
     id: solar_energy
     entity_id: sensor.total_dc_power
+
+  - platform: homeassistant
+    name: battery_level
+    id: battery_level
+    entity_id: sensor.battery_level
+
+  - platform: homeassistant
+    name: battery_power
+    id: battery_power
+    entity_id: sensor.signed_battery_power
+
   - platform: homeassistant
     name: Outdoor temperature
     id: outdoor_temperature
@@ -362,32 +347,46 @@ sensor:
     name: Lounge Temp
     id: lounge_temp
     entity_id: sensor.lounge_temp
-
-climate:
-  - platform: thermostat
-    name: "Bromell Climate Controller"
-    sensor: lounge_temp
-    min_heating_off_time: 300s
-    min_heating_run_time: 300s
-    min_idle_time: 30s
-    heat_action:
-      - logger.log: "switch.turn_on: heater"
-    idle_action:
-      - logger.log: "switch.turn_off: heater"
-    default_preset: Home
-    preset:
-      - name: Home
-        default_target_temperature_low: 19.5 °C
+  - platform: homeassistant
+    name: Max Temp
+    id: max_temp
+    entity_id: sensor.wanniassa_temp_max_0
+  - platform: homeassistant
+    name: Min Temp
+    id: min_temp
+    entity_id: sensor.wanniassa_temp_min_0
+  - platform: homeassistant
+    name: Feels Like Temp
+    id: feels_temp
+    entity_id: sensor.tuggeranong_temp_feels_like
+  - platform: homeassistant
+    name: Max Rain
+    id: max_rain
+    entity_id: sensor.wanniassa_rain_amount_max_0
 
 text_sensor:
   - platform: homeassistant
-    name: Weather
-    id: weather_conditions
-    entity_id: ${weather_conditions}
+    name: ems_mode
+    id: ems_mode
+    entity_id: sensor.ems_mode_selection
+
   - platform: homeassistant
-    name: Sun
-    id: sun_position
-    entity_id: sun.sun
+    name: battery_mode
+    id: battery_mode
+    entity_id: sensor.battery_forced_charge_discharge_cmd
+
+  - platform: homeassistant
+    name: Weather Description
+    id: weather_desc
+    entity_id: sensor.wanniassa_extended_text_0
+  - platform: homeassistant
+    name: Weather Word
+    id: weather_word
+    entity_id: sensor.wanniassa_icon_descriptor_0
+  - platform: homeassistant
+    name: Weather Icon
+    id: weather_icon
+    entity_id: sensor.wanniassa_mdi_icon_0
 
 interval:
   - interval: 300s
