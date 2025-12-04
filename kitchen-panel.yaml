@@ -261,7 +261,7 @@ display:
       if (NOT_NAN(value))
         it.printf(col1 + gap, base_y, id(small_font), "%4.0f%%", value);
 
-      it.print(col2, base_y, id(tiny_font), "Humidity");
+      it.print(col2 - gap, base_y, id(tiny_font), "Humidity");
       value = id(kitchen_humidity).state;
       if (NOT_NAN(value))
         it.printf(col2 + gap, base_y, id(small_font), "%4.0f%%", value);
