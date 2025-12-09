@@ -21,7 +21,7 @@ sensor:
     shunt_resistance: 0.1 ohm
     max_current: 5A
     adc_time: 1100us
-    adc_averaging: 64
+    adc_averaging: 16
     power:
       name: "Power"
       id: gate_power
@@ -80,6 +80,7 @@ switch:
     # - light.turn_on: light_led
     - delay: 12s
     - switch.turn_off: relay_1
+    - component.update: power_sensor
     # - light.turn_off: light_led
 
   - platform: gpio
@@ -92,6 +93,7 @@ switch:
     # - light.turn_on: light_led
     - delay: 12s
     - switch.turn_off: relay_2
+    - component.update: power_sensor
     # - script.execute: auto_close
     # - script.execute: max_open_timer
 
