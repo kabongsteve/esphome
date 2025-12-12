@@ -7,6 +7,29 @@ esp32:
   framework:
     type: esp-idf
 
+# Enable logging
+logger:
+  level: INFO
+  baud_rate: 0
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "U4RGsTGSQMh+mjaPjQuRHSIBk+h/de2FAJ3kRtXN+mk="
+
+ota:
+  - platform: esphome
+    password: "ee535e173be93995552584f648726373"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+web_server:
+  include_internal: True
+  js_include: "./v2/www.js"
+  js_url: ""
+  version: 2
 
 i2c:
   sda: GPIO21
@@ -15,6 +38,10 @@ i2c:
   #frequency: 10kHz
 
 sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal Sensor"
+    update_interval: 60s
+
   - platform: ina226
     id: power_sensor
     address: 0x40
@@ -22,6 +49,7 @@ sensor:
     max_current: 5A
     adc_time: 1100us
     adc_averaging: 16
+    
     power:
       name: "Power"
       id: gate_power
@@ -50,6 +78,7 @@ light:
     internal: true
     output: output_led
 
+
 binary_sensor:
   - platform: gpio
     pin:
@@ -61,11 +90,17 @@ binary_sensor:
       - delayed_on: 100ms
     on_press:
       then:
+        - logger.log:
+            format: "Button Press"
+            level: INFO
         - cover.toggle: gate
     on_click:
     - min_length: 1s
       max_length: 5s
       then:
+        - logger.log:
+            format: "Button Long Press"
+            level: INFO
         - switch.toggle: hold
 
 # Relays exposed as switches
@@ -77,11 +112,10 @@ switch:
     internal: true
     interlock: [relay_2]
     on_turn_on:
-    # - light.turn_on: light_led
-    - delay: 12s
-    - switch.turn_off: relay_1
-    - component.update: power_sensor
-    # - light.turn_off: light_led
+      - script.execute: monitor
+      # - light.turn_on: light_led
+      - delay: 12s
+      - switch.turn_off: relay_1
 
   - platform: gpio
     pin: GPIO17
@@ -90,12 +124,10 @@ switch:
     internal: true
     interlock: [relay_1]
     on_turn_on:
-    # - light.turn_on: light_led
-    - delay: 12s
-    - switch.turn_off: relay_2
-    - component.update: power_sensor
-    # - script.execute: auto_close
-    # - script.execute: max_open_timer
+      - script.execute: monitor
+      # - light.turn_on: light_led
+      - delay: 12s
+      - switch.turn_off: relay_2
 
   - platform: template
     id: hold
@@ -114,25 +146,42 @@ cover:
   - platform: time_based
     id: gate
     name: Gate
-    manual_control: true
+    # manual_control: true
     has_built_in_endstop: true
     open_action:
+      - logger.log:
+          format: "Gate Opening"
+          level: INFO
       - switch.turn_on: relay_2
       - script.execute: auto_close
       - script.execute: max_open_timer
     open_duration: 10s
     close_action:
+      - logger.log:
+          format: "Gate Closing"
+          level: INFO
       - script.stop: auto_close
       - light.turn_off: light_led
       - switch.turn_on: relay_1
       - switch.turn_off: hold
     close_duration: 10s
+    on_open:
+      - logger.log:
+          format: "Gate Open"
+          level: INFO
+    on_closed:
+      - logger.log:
+          format: "Gate Closed"
+          level: INFO
 
     stop_action:
       - switch.turn_off: relay_1
       - switch.turn_off: relay_2
+      - logger.log:
+          format: "Gate Stopped %.0f%%"
+          args: [ 'id(gate).position * 100' ]
+          level: INFO
       - delay: 500ms
-      - component.update: power_sensor
 
 number:
   - platform: template
@@ -173,37 +222,30 @@ script:
       - delay: !lambda 'return id(hold_duration).state * 60 * 1000;' 
       - cover.close: gate
 
-interval:
-  - interval: 250ms
+  - id: monitor
+    mode: restart
     then:
-      - if:
+      - script.execute: progress
+      - delay: 250ms    # wait for start power surge
+      - component.update: power_sensor
+      - while:
           condition:
             lambda: 'return id(gate).current_operation != CoverOperation::COVER_OPERATION_IDLE;'
           then:
             - component.update: power_sensor
+            - delay: 250ms
+      - delay: 250ms
+      - component.update: power_sensor
 
-# Enable logging
-logger:
-  level: DEBUG
-
-# Enable Home Assistant API
-api:
-  encryption:
-    key: "U4RGsTGSQMh+mjaPjQuRHSIBk+h/de2FAJ3kRtXN+mk="
-
-ota:
-  - platform: esphome
-    password: "ee535e173be93995552584f648726373"
-
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
-  ap:
-    ssid: "Reargate Fallback Hotspot"
-    password: "dAG2sj2h34SH"
-
-captive_portal:
-
-web_server:
+  - id: progress
+    mode: restart
+    then:
+      - while:
+          condition:
+            lambda: 'return id(gate).current_operation != CoverOperation::COVER_OPERATION_IDLE;'
+          then:
+            - logger.log:
+                format: "Gate %.0f%%"
+                args: [ 'id(gate).position * 100' ]
+                level: INFO
+            - delay: 1s

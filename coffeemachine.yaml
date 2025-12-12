@@ -1,6 +1,6 @@
 esphome:
-  name: coffeethermometer
-  friendly_name: CoffeeThermometer
+  name: coffeemachine
+  friendly_name: Coffee Machine
   on_boot:
     - light.control:
         id: backlight
@@ -36,6 +36,10 @@ wifi:
   output_power: 8.5dB
 
 web_server:
+  include_internal: True
+  js_include: "./v2/www.js"
+  js_url: ""
+  version: 2
 
 spi:
   mosi_pin: GPIO9
@@ -170,13 +174,13 @@ lvgl:
                             color: darkseagreen
                             r_mod: -1
                     # Major ticks
-                    - angle_range: 330
+                    - angle_range: 360
                       rotation: 270
                       range_from: 0
-                      range_to: 11
+                      range_to: 72
                       ticks:
                         width: 3
-                        count: 12
+                        count: 13
                         length: 20
                         color: Blue
                       indicators:
@@ -218,7 +222,6 @@ lvgl:
       width: 100%
       bg_color: Black
       widgets:
-          # Outer Clock Container
           - obj:
               height: 240
               width: 240
@@ -292,44 +295,10 @@ time:
       - seconds: 0
         minutes: /1
         then:
-          - lvgl.indicator.update:
-              id: minute_hand
-              end_value: !lambda 'return id(local_time).now().minute;'
-          - lvgl.indicator.update:
-              id: hour_hand
-              end_value: !lambda 'return id(local_time).now().hour % 12;'
-          - lvgl.label.update:
-              id: digital_time
-              text:
-                format: "%02d:%02d"
-                args: [ id(local_time).now().hour, id(local_time).now().minute ]
-          - lvgl.label.update:
-              id: digital_date
-              text: !lambda |-
-                char buf[30];
-                char dayname[] = "XXXSunMonTueWedThuFriSat";
-                sprintf(buf, "%3.3s %d%s", &dayname[id(local_time).now().day_of_week * 3], id(local_time).now().day_of_month, (id(local_time).now().day_of_month % 10) == 1? "st" : (id(local_time).now().day_of_month % 10) == 2? "nd" : (id(local_time).now().day_of_month % 10) == 3? "rd" : "th");
-                return std::string(buf);
+          - script.execute: set_time
     on_time_sync:
       then:
-        - lvgl.indicator.update:
-            id: minute_hand
-            end_value: !lambda 'return id(local_time).now().minute;'
-        - lvgl.indicator.update:
-            id: hour_hand
-            end_value: !lambda 'return id(local_time).now().hour % 12;'
-        - lvgl.label.update:
-            id: digital_time
-            text:
-              format: "%02d:%02d"
-              args: [ id(local_time).now().hour, id(local_time).now().minute ]
-        - lvgl.label.update:
-            id: digital_date
-            text: !lambda |-
-              char buf[30];
-              char dayname[] = "XXXSunMonTueWedThuFriSat";
-              sprintf(buf, "%3.3s %d%s", &dayname[id(local_time).now().day_of_week * 3], id(local_time).now().day_of_month, (id(local_time).now().day_of_month % 10) == 1? "st" : (id(local_time).now().day_of_month % 10) == 2? "nd" : (id(local_time).now().day_of_month % 10) == 3? "rd" : "th");
-              return std::string(buf);
+          - script.execute: set_time
 
 binary_sensor:
   - platform: touchscreen
@@ -487,3 +456,24 @@ script:
                   - light.control:
                       id: backlight
                       brightness: "30%"
+  - id: set_time
+    mode: single
+    then:
+      - lvgl.indicator.update:
+          id: minute_hand
+          end_value: !lambda 'return id(local_time).now().minute;'
+      - lvgl.indicator.update:
+          id: hour_hand
+          end_value: !lambda 'return id(local_time).now().hour % 12 * 6 + id(local_time).now().minute / 10;'
+      - lvgl.label.update:
+          id: digital_time
+          text:
+            format: "%02d:%02d"
+            args: [ id(local_time).now().hour, id(local_time).now().minute ]
+      - lvgl.label.update:
+          id: digital_date
+          text: !lambda |-
+            char buf[30];
+            char dayname[] = "XXXSunMonTueWedThuFriSat";
+            sprintf(buf, "%3.3s %d%s", &dayname[id(local_time).now().day_of_week * 3], id(local_time).now().day_of_month, (id(local_time).now().day_of_month % 10) == 1? "st" : (id(local_time).now().day_of_month % 10) == 2? "nd" : (id(local_time).now().day_of_month % 10) == 3? "rd" : "th");
+            return std::string(buf);

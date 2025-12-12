@@ -5,7 +5,7 @@ substitutions:
 
 esphome:
   name: garageaudi
-  friendly_name: garage_audi
+  friendly_name: Audi Garage
   on_boot:
     then:
       - cover.close: door
@@ -149,5 +149,7 @@ mqtt:
   discovery: false
 
 web_server:
-  port: 80
-  include_internal: true
+  include_internal: True
+  js_include: "./v2/www.js"
+  js_url: ""
+  version: 2

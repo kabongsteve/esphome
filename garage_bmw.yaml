@@ -5,7 +5,7 @@ substitutions:
 
 esphome:
   name: garagebmw
-  friendly_name: garage_bmw
+  friendly_name: BMW Garage
   on_boot:
     then:
       - cover.close: door
@@ -160,5 +160,7 @@ cover:
       switch.turn_on: relay
 
 web_server:
-  port: 80
   include_internal: true
+  js_include: "./v2/www.js"
+  js_url: ""
+  version: 2
