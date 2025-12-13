@@ -22,6 +22,7 @@ logger:
   baud_rate: 0
   logs:
     component: ERROR
+
 # Enable Home Assistant API
 api:
   encryption:
@@ -44,6 +45,32 @@ web_server:
   js_include: "./v2/www.js"
   js_url: ""
   version: 2
+
+udp:
+  addresses: 192.168.12.20
+  port:
+    listen_port: 8666
+    broadcast_port: 18511
+
+  on_receive: 
+    then:
+      - logger.log: 
+          format: "%s Rebooting..."
+          args: [ 'std::string(data.begin(), data.end()).c_str()' ]
+      - if:
+          condition:
+            lambda: 'return std::string(data.begin(), data.end()).starts_with("RESTART");'
+          then:
+            - logger.log: Rebooting...
+            - delay: 2s
+            - button.press: reboot_now
+
+syslog:
+  port: 514
+  strip: true
+
+debug:
+  update_interval: 15s
 
 number:
   - platform: template
@@ -107,6 +134,21 @@ sensor:
   - platform: wifi_signal
     name: "WiFi Signal Sensor"
     update_interval: 60s
+  - platform: template
+    name: Http Errors
+    lambda: return (float)id(http_error_cnt);
+  - platform: debug
+    free:
+      name: "Heap Free"
+    block:
+      name: "Heap Max Block"
+    loop_time:
+      name: "Loop Time"
+
+text_sensor:
+  - platform: debug
+    reset_reason:
+      name: "Reset Reason"
 
 climate:
   - platform: thermostat
@@ -139,7 +181,7 @@ climate:
       - script.execute: mode_changed
     off_mode:
       - logger.log: Turned Off
-      - script.execute: mode_changed
+      - script.execute: turn_on
     heat_mode:
       - logger.log: Set to Heat
       - script.execute: turn_on
@@ -289,8 +331,10 @@ script:
 
 
   - id: check_daikin_info
-    mode: single
+    mode: queued
+    max_runs: 2
     then:
+      - logger.log: Check Daikin Info
       - lambda: |-
           if (id(daikin)["ac_mode"] == 99)
             id(mode_changed)->execute();
@@ -314,8 +358,10 @@ script:
                       }
                   }
           on_error:
-             - logger.log: http error
              - lambda: id(http_error_cnt) += 1;
+             - logger.log: 
+                format: "http error %d"
+                args: [ id(http_error_cnt) ]
              - script.stop: check_daikin_info
       - lambda: 'id(http_error_cnt) = 0;'
       - if:
@@ -378,11 +424,13 @@ script:
                 
                 capture_response: false
                 on_error:
-                  - logger.log: http error
                   - lambda: id(http_error_cnt) += 1;
+                  - logger.log: 
+                      format: "http error %d"
+                      args: [ id(http_error_cnt) ]
 
 interval:
-  - interval: 15s
+  - interval: 60s
     startup_delay: 15s
     then:
       - lambda: |-

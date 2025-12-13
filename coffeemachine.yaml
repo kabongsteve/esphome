@@ -475,5 +475,7 @@ script:
           text: !lambda |-
             char buf[30];
             char dayname[] = "XXXSunMonTueWedThuFriSat";
-            sprintf(buf, "%3.3s %d%s", &dayname[id(local_time).now().day_of_week * 3], id(local_time).now().day_of_month, (id(local_time).now().day_of_month % 10) == 1? "st" : (id(local_time).now().day_of_month % 10) == 2? "nd" : (id(local_time).now().day_of_month % 10) == 3? "rd" : "th");
+            int dom = id(local_time).now().day_of_month;
+            const char * suffix = (dom ==11 | dom == 12 || dom ==13)? "th": dom % 10 == 1? "st" : dom % 10 == 2? "st": dom % 10 == 3? "rd": "th";
+            sprintf(buf, "%3.3s %d%s", &dayname[id(local_time).now().day_of_week * 3], id(local_time).now().day_of_month, suffix);
             return std::string(buf);
