@@ -18,6 +18,7 @@ esp8266:
 
 # Enable logging
 logger:
+  baud_rate: 0
 
 # Enable Home Assistant API
 api:
@@ -32,9 +33,6 @@ wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   min_auth_mode: WPA2
-
-mdns:
-  disabled: False
 
 globals:
   - id: auto_close_enabled
@@ -163,4 +161,6 @@ web_server:
   include_internal: true
   js_include: "./v2/www.js"
   js_url: ""
+  css_url: ""
+  css_include: "./v2/webserver-v1.min.js"
   version: 2

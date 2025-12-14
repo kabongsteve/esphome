@@ -115,24 +115,24 @@ font:
   - file: 'gfonts://Roboto'
     id: normal_font
     size: 52
+    extras:
+      - file: "fonts/materialdesignicons-webfont.ttf"
+        glyphs: [
+          '󰊚',    # mdi-gauge
+          '󰶜',    # mdi-solar-panel-large
+          '󱤄',    # mdi-home-lightning-bolt-outline
+          '󰴾',    # mdi-transmission-tower
+          "\U000F1901", # mdi:home-battery
+          "\U000F12A5",     # mdi:battery-charging-medium
+          "\U000F1019"    # care-coolant-level
+        ]
+
   - file: 'gfonts://Roboto'
     id: small_font
     size: 36
   - file: 'gfonts://Roboto'
     id: tiny_font
     size: 24
-  - file: "fonts/materialdesignicons-webfont.ttf"
-    id: small_icons_font
-    size: 50
-    glyphs: [
-        '󰊚',    # mdi-gauge
-        '󰶜',    # mdi-solar-panel-large
-        '󱤄',    # mdi-home-lightning-bolt-outline
-        '󰴾',    # mdi-transmission-tower
-        "\U000F1901", # mdi:home-battery
-        "\U000F12A5",     # mdi:battery-charging-medium
-        "\U000F1019"    # care-coolant-level
-      ]
   - file: "fonts/materialdesignicons-webfont.ttf"
     id: weather_font
     size: 196
@@ -190,38 +190,7 @@ display:
 
       float value;
 
-
       #define NOT_NAN(x) ((x) == (x))
-
-      // value = id(outdoor_temperature).state;
-      // if (NOT_NAN(value))
-      //   it.printf(left, 200, id(small_font), "%.1f°C (M %.1f)", value, id(max_temp).state);
-      // else
-      //   it.print(left, 200, id(small_font), "---");
-
-      // value = id(kitchen_temp).state;
-      // if (NOT_NAN(value))
-      //   it.printf(left, 245, id(small_font), "Inside %.1f°C", value);
-      // else
-      //   it.print(left, 245, id(small_font), "---");
-
-      // value = id(rain_today).state;
-      // if (NOT_NAN(value))
-      //   it.printf(left, 290, id(small_font), "%.1f mm (%.1f)", value, id(max_rain).state);
-      // else
-      //   it.print(left, 290, id(small_font), "---");
-
-      // value = id(rain_rate).state;
-      // if (NOT_NAN(value))
-      //   it.printf(left, 320, id(small_font), "%.1f mm/h", value);
-      // else
-      //   it.print(left, 320, id(small_font), "---");
-
-      // value = id(tank_level).state;
-      // float perc = value * 100 / 2200.0;
-      // if (NOT_NAN(value))
-      //   it.printf(left, 380, id(small_font), "%.0f lt (%.0f%%)", value, perc);
-
 
       uint col1 = 20;
       uint col2 = 280;
@@ -269,7 +238,7 @@ display:
         it.printf(col2 + gap, base_y, id(small_font), "%4.0f%%", value);
 
       base_y += 30;
-      it.print(col3, base_y, id(small_icons_font), weather_icon_color, "\U000F1019");
+      it.print(col3, base_y, id(normal_font), weather_icon_color, "\U000F1019");
       value = id(tank_level).state;
       float perc = value * 100 / 2200.0;
       if (NOT_NAN(value))
@@ -278,7 +247,7 @@ display:
       base_y += rowgap - halfgap;
 
       it.print(col1 + gap, base_y - halfgap, id(tiny_font), "Solar kW");
-      it.print(col1, base_y, id(small_icons_font), weather_icon_color, "\U000F0D9C");
+      it.print(col1, base_y, id(normal_font), weather_icon_color, "\U000F0D9C");
       value = id(solar_energy).state / 1000.;
       if (NOT_NAN(value))
         it.printf(col1 + gap, base_y, id(normal_font), "%.2f", value);
@@ -287,7 +256,7 @@ display:
         it.printf(col1, base_y + 60, id(small_font), "Rem %.2f", value);
 
       it.print(col2 + gap, base_y - halfgap, id(tiny_font), "House kW");
-      it.print(col2, base_y, id(small_icons_font), weather_icon_color, "\U000F1904");
+      it.print(col2, base_y, id(normal_font), weather_icon_color, "\U000F1904");
       value = id(load_energy).state / 1000.;
       if (NOT_NAN(value))
         it.printf(col2 + gap, base_y, id(normal_font), "%.2f", value);
@@ -297,14 +266,14 @@ display:
 
       base_y += halfgap;
       it.print(col3 + gap, base_y - halfgap, id(tiny_font), "Battery %");
-      it.print(col3, base_y, id(small_icons_font), weather_icon_color, "\U000F12A5");
+      it.print(col3, base_y, id(normal_font), weather_icon_color, "\U000F12A5");
       value = id(battery_level).state;
       if (NOT_NAN(value))
         it.printf(col3 + gap, base_y, id(normal_font), "%3.0f", value);
 
       // base_y += rowgap;
 
-      // it.print(col2, base_y, id(small_icons_font), weather_icon_color, "\U000F1901");
+      // it.print(col2, base_y, id(normal_font), weather_icon_color, "\U000F1901");
       // value = id(battery_power).state / 1000.;
       // if (NOT_NAN(value))
       //   it.printf(col2 + gap, base_y, id(normal_font), "%.2f kW", value);

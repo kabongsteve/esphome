@@ -18,6 +18,7 @@ psram:
 
 # Enable logging
 logger:
+  baud_rate: 0
 
 # Enable Home Assistant API
 api:
@@ -39,6 +40,8 @@ web_server:
   include_internal: True
   js_include: "./v2/www.js"
   js_url: ""
+  css_url: ""
+  css_include: "./v2/webserver-v1.min.js"
   version: 2
 
 spi:

@@ -16,6 +16,7 @@ external_components:
   - source: github://Fabian-Schmidt/esphome-victron_ble
 
 logger:
+  baud_rate: 0
   level: DEBUG
 
 psram:
@@ -216,19 +217,6 @@ font:
 
 
 interval:
-  # - interval: 2500ms
-  #   then:
-  #     - component.update: shunt_TIME_TO_GO_text
-  #     - component.update: shunt_STATE_OF_CHARGE_symbol
-  #     - if:
-  #         condition:
-  #           lambda: 'return (id(shunt_STATE_OF_CHARGE).state < 15.0);'
-  #         then:
-  #           - display.page.show_next: my_display
-  #         else:
-  #           - display.page.show: main_page
-  #     - component.update: my_display
-
   - interval: 5000ms
     then:
       - component.update: shunt_TIME_TO_GO_text

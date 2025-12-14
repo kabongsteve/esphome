@@ -8,13 +8,10 @@ esp32:
   board: esp32dev
   framework:
     type: esp-idf
-
-external_components:
-  - source:
-      type: git
-      url: https://github.com/miceno/esphome-http_request
-      ref: fix/infinite-loop
-    components: [ http_request ]
+    sdkconfig_options:
+      CONFIG_LWIP_MAX_SOCKETS: "16"
+    advanced:
+      enable_lwip_tcpip_core_locking: true 
 
 # Enable logging
 logger:
@@ -22,6 +19,13 @@ logger:
   baud_rate: 0
   logs:
     component: ERROR
+    http_request.idf: INFO
+    main: INFO
+
+syslog:
+  port: 514
+  strip: true
+  #level: INFO
 
 # Enable Home Assistant API
 api:
@@ -44,7 +48,10 @@ web_server:
   include_internal: True
   js_include: "./v2/www.js"
   js_url: ""
+  css_url: ""
+  css_include: "./v2/webserver-v1.min.js"
   version: 2
+  log: false
 
 udp:
   addresses: 192.168.12.20
@@ -57,20 +64,15 @@ udp:
       - logger.log: 
           format: "%s Rebooting..."
           args: [ 'std::string(data.begin(), data.end()).c_str()' ]
+          level: WARN
       - if:
           condition:
             lambda: 'return std::string(data.begin(), data.end()).starts_with("RESTART");'
           then:
-            - logger.log: Rebooting...
             - delay: 2s
             - button.press: reboot_now
 
-syslog:
-  port: 514
-  strip: true
-
 debug:
-  update_interval: 15s
 
 number:
   - platform: template
@@ -137,13 +139,6 @@ sensor:
   - platform: template
     name: Http Errors
     lambda: return (float)id(http_error_cnt);
-  - platform: debug
-    free:
-      name: "Heap Free"
-    block:
-      name: "Heap Max Block"
-    loop_time:
-      name: "Loop Time"
 
 text_sensor:
   - platform: debug
@@ -171,46 +166,74 @@ climate:
     # temperature_step: 0.1
     min_idle_time: 30s
     cool_action:
-      - logger.log: Cooling Start
+      - logger.log: 
+          level: INFO
+          format: Cooling Start
       - script.execute: mode_changed
     heat_action:
-      - logger.log: Heating Start
+      - logger.log: 
+          level: INFO
+          format: Heating Start
       - script.execute: mode_changed
     idle_action:
-      - logger.log: Idle Start
+      - logger.log: 
+          level: INFO
+          format: Idle Start
       - script.execute: mode_changed
     off_mode:
-      - logger.log: Turned Off
+      - logger.log: 
+          level: INFO
+          format: Turned Off
       - script.execute: turn_on
     heat_mode:
-      - logger.log: Set to Heat
+      - logger.log: 
+          level: INFO
+          format: Set to Heat
       - script.execute: turn_on
     cool_mode:
-      - logger.log: Set to Cool
+      - logger.log: 
+          level: INFO
+          format: Set to Cool
       - script.execute: turn_on
     heat_cool_mode:
-      - logger.log: Set to Heat/Cool
+      - logger.log: 
+          level: INFO
+          format: Set to Heat/Cool
       - script.execute: turn_on
     fan_only_action:
-      - logger.log: Fan Only
+      - logger.log: 
+          level: INFO
+          format: Fan Only
       - script.execute: mode_changed
     fan_mode_auto_action:
-      - logger.log: Fan Auto
+      - logger.log: 
+          level: INFO
+          format: Fan Auto
       - script.execute: mode_changed
     fan_mode_low_action:
-      - logger.log: Fan Low
+      - logger.log: 
+          level: INFO
+          format: Fan Low
       - script.execute: mode_changed
     fan_mode_medium_action:
-      - logger.log: Fan Medium
+      - logger.log: 
+          level: INFO
+          format: Fan Medium
       - script.execute: mode_changed
     fan_mode_high_action:
-      - logger.log: Fan High
+      - logger.log: 
+          level: INFO
+          format: Fan High
       - script.execute: mode_changed
     preset_change:
-      - logger.log: Preset changed
+      - logger.log: 
+          level: INFO
+          format: Preset changed
       - script.execute: mode_changed
     target_temperature_change_action:
-      - logger.log: Target Temp changed
+      - logger.log: 
+          level: INFO
+          format: Target Temp changed
       - script.execute: mode_changed
 
     default_preset: Summer Day
@@ -257,6 +280,11 @@ button:
   - platform: restart
     id: reboot_now
     name: "Ac Controller Restart"
+    on_press: 
+      then:
+        - logger.log: 
+            level: WARN
+            format: Rebooting...
 
 mapping:
   - id: daikin
@@ -269,7 +297,9 @@ script:
   - id: turn_on
     mode: single
     then:
-      - logger.log: Turn on Script
+      - logger.log: 
+          level: DEBUG
+          format: Turn on Script
       - lambda: id(turned_on) = id(homeassistant_time).now().timestamp;
       - script.execute: mode_changed
       - script.execute: check_daikin_info
@@ -277,7 +307,9 @@ script:
   - id: mode_changed
     mode: restart
     then:
-      - logger.log: Controls changed
+      - logger.log: 
+          level: DEBUG
+          format: Controls changed
       - lambda: |-
           if (id(ac).mode == CLIMATE_MODE_HEAT) {
             id(daikin).set("ac_mode", 1);
@@ -334,7 +366,9 @@ script:
     mode: queued
     max_runs: 2
     then:
-      - logger.log: Check Daikin Info
+      - logger.log: 
+          format: Check Daikin Info
+          level: INFO
       - lambda: |-
           if (id(daikin)["ac_mode"] == 99)
             id(mode_changed)->execute();
@@ -359,7 +393,8 @@ script:
                   }
           on_error:
              - lambda: id(http_error_cnt) += 1;
-             - logger.log: 
+             - logger.log:
+                level: WARN 
                 format: "http error %d"
                 args: [ id(http_error_cnt) ]
              - script.stop: check_daikin_info
@@ -409,10 +444,12 @@ script:
                   - logger.log:
                       format: "Daikin in sync %d, %d"
                       args: ['id(daikin)["ac_temp"] + (id(daikin)["ac_idle"] * id(daikin)["ac_offset"])', 'id(daikin)["ac_mode"]']
+                      level: DEBUG
           else:
             - logger.log:
                 format: "Update Daikin %d, %d, %d"
                 args: ['id(daikin)["ac_temp"] + (id(daikin)["ac_idle"] * id(daikin)["ac_offset"])', 'id(daikin)["ac_mode"]', 'id(daikin)["ac_pow"]']
+                level: DEBUG
             - http_request.get:
                 url: !lambda |-
                   char buf[256];
@@ -426,12 +463,13 @@ script:
                 on_error:
                   - lambda: id(http_error_cnt) += 1;
                   - logger.log: 
+                      level: WARN
                       format: "http error %d"
                       args: [ id(http_error_cnt) ]
 
 interval:
   - interval: 60s
-    startup_delay: 15s
+    startup_delay: 10s
     then:
       - lambda: |-
           if (id(http_error_cnt) > 10)
