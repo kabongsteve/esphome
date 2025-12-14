@@ -279,6 +279,8 @@ lvgl:
                 src: water
                 mode: virtual
                 bg_image_opa: TRANSP
+                x: 0
+                y: 0
                 offset_x: 0
                 offset_y: -240
                 pad_all: 0
@@ -329,11 +331,11 @@ lvgl:
                         - "Hose"
                         - "Garden"
                         - "Front"
-                        - "Back"
+                        - "Fence"
                         - "Hose (M)"
                         - "Garden (M)"
                         - "Front (M)"
-                        - "Back (M)"
+                        - "Fence (M)"
                       selected_index: 0
                       visible_row_count: 3
             - obj:
@@ -627,13 +629,13 @@ sensor:
     filters:
       - lambda: return x / 24;
 
-  - platform: copy # Reports the WiFi signal strength in %
+  - platform: copy 
     id: level_image
-    source_id: volume
+    source_id: level_percent
     name: "TankLevel Image"
     internal: true
     filters:
-      - lambda: return x * 2 / 10;
+      - lambda: return (int)x * 4.8 + 12;
       - round: 0
 
   - platform: wifi_signal # Reports the WiFi signal strength/RSSI in dB
@@ -972,8 +974,8 @@ sprinkler:
         valve_switch_id: front
         pump_switch_id: pump
         run_duration: 900s
-      - valve_switch: "Back"
-        valve_switch_id: back
+      - valve_switch: "Fence"
+        valve_switch_id: fence
         pump_switch_id: pump
         run_duration: 900s
       - valve_switch: "Hose M"
@@ -988,8 +990,8 @@ sprinkler:
         valve_switch_id: front
         pump_switch_id: mains
         run_duration: 900s
-      - valve_switch: "Back M"
-        valve_switch_id: back
+      - valve_switch: "Fence M"
+        valve_switch_id: fence
         pump_switch_id: mains
         run_duration: 900s
 
