@@ -8,6 +8,8 @@ esphome:
 
 esp32:
   board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  cpu_frequency: 240MHZ
   framework:
     type: esp-idf
 
@@ -112,6 +114,12 @@ font:
     size: 40
     bpp: 4
     glyphsets: GF_Latin_Core
+    extras:
+      - file: "fonts/materialdesignicons-webfont.ttf"
+        glyphs: [
+            "\U000F0425"    # mdi-power
+          ]
+
   - file: "gfonts://Roboto"
     id: roboto64
     size: 64
@@ -123,12 +131,17 @@ font:
     id: roboto80
     size: 80
     bpp: 4
-  - file: "fonts/materialdesignicons-webfont.ttf"
-    id: icons_font
-    size: 50
-    glyphs: [
-        "\U000F0425"    # mdi-power
-      ]
+
+
+# image:
+#   - file: img/eyeball.jpg
+#     id: eyeball
+#     type: RGB565
+#     transparency: alpha_channel
+animation:
+  - file: "img/eyeball.gif"
+    id: eyeball
+    type: RGB565
 
 lvgl:
   pages:
@@ -173,13 +186,13 @@ lvgl:
                             color: darkseagreen
                             r_mod: -1
                     # Major ticks
-                    - angle_range: 330
+                    - angle_range: 360
                       rotation: 270
                       range_from: 0
-                      range_to: 11
+                      range_to: 72
                       ticks:
                         width: 3
-                        count: 12
+                        count: 13
                         length: 20
                         color: Blue
                       indicators:
@@ -213,7 +226,7 @@ lvgl:
                   id: power
                   align: BOTTOM_MID
                   y: -20
-                  text_font: icons_font
+                  text_font: roboto48
                   text_color: red
                   bg_color: Black
                   text: "\U000F0425"
@@ -221,7 +234,6 @@ lvgl:
       width: 100%
       bg_color: Black
       widgets:
-          # Outer Clock Container
           - obj:
               height: 240
               width: 240
@@ -287,6 +299,29 @@ lvgl:
                   text_font: roboto80
                   bg_color: Black
                   text_color: blue
+    - id: eyeball_page
+      x: 0
+      y: 0
+      width: 100%
+      height: 100%
+      bg_color: black
+      text_color: aliceblue
+      bg_opa: COVER
+      radius: 0
+      pad_all: 0
+      border_width: 0
+      widgets:
+        - image:
+            id: eyeball_img
+            src: eyeball
+            mode: VIRTUAL
+            bg_image_opa: TRANSP
+            x: 0
+            y: 0
+            offset_x: 0
+            offset_y: 0
+            pad_all: 0
+            border_width: 0
 
 time:
   - platform: homeassistant
@@ -295,44 +330,10 @@ time:
       - seconds: 0
         minutes: /1
         then:
-          - lvgl.indicator.update:
-              id: minute_hand
-              end_value: !lambda 'return id(local_time).now().minute;'
-          - lvgl.indicator.update:
-              id: hour_hand
-              end_value: !lambda 'return id(local_time).now().hour % 12;'
-          - lvgl.label.update:
-              id: digital_time
-              text:
-                format: "%02d:%02d"
-                args: [ id(local_time).now().hour, id(local_time).now().minute ]
-          - lvgl.label.update:
-              id: digital_date
-              text: !lambda |-
-                char buf[30];
-                char dayname[] = "XXXSunMonTueWedThuFriSat";
-                sprintf(buf, "%3.3s %d%s", &dayname[id(local_time).now().day_of_week * 3], id(local_time).now().day_of_month, (id(local_time).now().day_of_month % 10) == 1? "st" : (id(local_time).now().day_of_month % 10) == 2? "nd" : (id(local_time).now().day_of_month % 10) == 3? "rd" : "th");
-                return std::string(buf);
+          - script.execute: set_time
     on_time_sync:
       then:
-        - lvgl.indicator.update:
-            id: minute_hand
-            end_value: !lambda 'return id(local_time).now().minute;'
-        - lvgl.indicator.update:
-            id: hour_hand
-            end_value: !lambda 'return id(local_time).now().hour % 12;'
-        - lvgl.label.update:
-            id: digital_time
-            text:
-              format: "%02d:%02d"
-              args: [ id(local_time).now().hour, id(local_time).now().minute ]
-        - lvgl.label.update:
-            id: digital_date
-            text: !lambda |-
-              char buf[30];
-              char dayname[] = "XXXSunMonTueWedThuFriSat";
-              sprintf(buf, "%3.3s %d%s", &dayname[id(local_time).now().day_of_week * 3], id(local_time).now().day_of_month, (id(local_time).now().day_of_month % 10) == 1? "st" : (id(local_time).now().day_of_month % 10) == 2? "nd" : (id(local_time).now().day_of_month % 10) == 3? "rd" : "th");
-              return std::string(buf);
+          - script.execute: set_time
 
 binary_sensor:
   - platform: touchscreen
@@ -387,7 +388,7 @@ sensor:
                 id: backlight
                 brightness: "30%"
   - platform: adc
-    pin: GPIO18
+    pin: GPIO01
     id: temp_sensor
     name: Temp Sensor
     attenuation: 12db
@@ -490,3 +491,65 @@ script:
                   - light.control:
                       id: backlight
                       brightness: "30%"
+  - id: set_time
+    mode: single
+    then:
+      - lvgl.indicator.update:
+          id: minute_hand
+          end_value: !lambda 'return id(local_time).now().minute;'
+      - lvgl.indicator.update:
+          id: hour_hand
+          end_value: !lambda 'return id(local_time).now().hour % 12 * 6 + id(local_time).now().minute / 10;'
+      - lvgl.label.update:
+          id: digital_time
+          text:
+            format: "%02d:%02d"
+            args: [ id(local_time).now().hour, id(local_time).now().minute ]
+      - lvgl.label.update:
+          id: digital_date
+          text: !lambda |-
+            char buf[30];
+            char dayname[] = "XXXSunMonTueWedThuFriSat";
+            int dom = id(local_time).now().day_of_month;
+            const char * suffix = (dom ==11 | dom == 12 || dom ==13)? "th": dom % 10 == 1? "st" : dom % 10 == 2? "st": dom % 10 == 3? "rd": "th";
+            sprintf(buf, "%3.3s %d%s", &dayname[id(local_time).now().day_of_week * 3], id(local_time).now().day_of_month, suffix);
+            return std::string(buf);
+
+interval:
+  - interval: 15s
+    startup_delay: 5s
+    then:
+      - animation.set_frame:
+          id: eyeball
+          frame: 16
+      - lvgl.image.update:
+          id: eyeball_img
+          src: eyeball
+      - lvgl.page.show: eyeball_page
+      - delay: 250ms
+      - repeat:
+          count: 15
+          then:
+            - animation.prev_frame: eyeball
+            - lvgl.image.update:
+                id: eyeball_img
+                src: eyeball
+            - delay: 50ms
+      - repeat:
+          count: 14
+          then:
+            - animation.next_frame: eyeball
+            - lvgl.image.update:
+                id: eyeball_img
+                src: eyeball
+            - delay: 80ms
+      - delay: 250ms
+      - lvgl.page.show: clock_page
+
+  # - interval: 100ms
+  #   startup_delay: 5s
+  #   then:
+  #     - animation.next_frame: eyeball
+  #     - lvgl.image.update:
+  #         id: eyeball_img
+  #         src: eyeball

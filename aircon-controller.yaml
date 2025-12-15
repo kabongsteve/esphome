@@ -13,6 +13,10 @@ esp32:
     advanced:
       enable_lwip_tcpip_core_locking: true 
 
+external_components:
+  - source: components
+    components: [ http_request ]
+
 # Enable logging
 logger:
   level: DEBUG
