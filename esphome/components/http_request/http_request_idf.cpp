@@ -153,9 +153,9 @@ std::shared_ptr<HttpContainer> HttpRequestIDF::perform(const std::string &url, c
 
   container->feed_wdt();
   container->content_length = esp_http_client_fetch_headers(client);
-  if (container->content_length < 0)
+  if (container->content_length < 0) {
     container->status_code = container->content_length;
-  else {
+  } else {
     container->feed_wdt();
     container->status_code = esp_http_client_get_status_code(client);
     container->feed_wdt();
