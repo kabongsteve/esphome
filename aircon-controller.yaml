@@ -15,15 +15,19 @@ esp32:
 
 external_components:
   - source: components
-    components: [ http_request ]
+#    components: [ http_request ]
 
 # Enable logging
 logger:
-  level: DEBUG
+  level: INFO
   baud_rate: 0
   logs:
     component: ERROR
+    sensor: INFO
+    switch: INFO
+    climate: INFO
     http_request.idf: INFO
+    homeassistant.sensor: INFO
     main: INFO
 
 syslog:
@@ -140,9 +144,6 @@ sensor:
   - platform: wifi_signal
     name: "WiFi Signal Sensor"
     update_interval: 60s
-  - platform: template
-    name: Http Errors
-    lambda: return (float)id(http_error_cnt);
 
 text_sensor:
   - platform: debug
@@ -263,10 +264,6 @@ globals:
   - id: turned_on
     type: int
     restore_value: yes
-  - id: http_error_cnt
-    type: int
-    restore_value: no
-    initial_value: '0'
   - id: url
     type: std::string
     restore_value: no
@@ -351,8 +348,9 @@ script:
             id(daikin).set("ac_pow", 0);
             id(daikin).set("ac_mode", 0);
           }
-          if (id(ac).action == CLIMATE_ACTION_IDLE || id(ac).action == CLIMATE_ACTION_OFF)
-            id(daikin).set("ac_idle", -1);
+          if (id(ac).action == CLIMATE_ACTION_IDLE || id(ac).action == CLIMATE_ACTION_OFF) {
+            id(daikin).set("ac_idle", -2);
+          }
           else
             id(daikin).set("ac_idle", 1);
 
@@ -396,13 +394,7 @@ script:
                       }
                   }
           on_error:
-             - lambda: id(http_error_cnt) += 1;
-             - logger.log:
-                level: WARN 
-                format: "http error %d"
-                args: [ id(http_error_cnt) ]
              - script.stop: check_daikin_info
-      - lambda: 'id(http_error_cnt) = 0;'
       - if:
           condition:
             lambda: |-
@@ -453,29 +445,20 @@ script:
             - logger.log:
                 format: "Update Daikin %d, %d, %d"
                 args: ['id(daikin)["ac_temp"] + (id(daikin)["ac_idle"] * id(daikin)["ac_offset"])', 'id(daikin)["ac_mode"]', 'id(daikin)["ac_pow"]']
-                level: DEBUG
+                level: INFO
             - http_request.get:
                 url: !lambda |-
                   char buf[256];
-                  int temp = id(daikin)["ac_temp"] + (id(daikin)["ac_idle"] * id(daikin)["ac_offset"]);
+                  int temp = round(id(daikin)["ac_temp"] + (id(daikin)["ac_idle"] * id(daikin)["ac_offset"]));
                   
                   sprintf(buf, "%sset_control_info?mode=%d&f_airside=0&dt2=%d&bk_auto=2&f_rate=%d&shum=0&pow=%d&stemp=%d&f_dir=0&f_auto=0", id(url).c_str(), id(daikin)["ac_mode"], temp, id(daikin)["ac_fan"], id(daikin)["ac_pow"], temp);
 
                   return std::string(buf);
                 
                 capture_response: false
-                on_error:
-                  - lambda: id(http_error_cnt) += 1;
-                  - logger.log: 
-                      level: WARN
-                      format: "http error %d"
-                      args: [ id(http_error_cnt) ]
 
 interval:
   - interval: 60s
     startup_delay: 10s
     then:
-      - lambda: |-
-          if (id(http_error_cnt) > 10)
-            id(reboot_now).press();
       - script.execute: check_daikin_info
