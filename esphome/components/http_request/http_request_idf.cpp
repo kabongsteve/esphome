@@ -153,15 +153,18 @@ std::shared_ptr<HttpContainer> HttpRequestIDF::perform(const std::string &url, c
 
   container->feed_wdt();
   container->content_length = esp_http_client_fetch_headers(client);
-  container->feed_wdt();
-  container->status_code = esp_http_client_get_status_code(client);
-  container->feed_wdt();
-  container->set_response_headers(user_data.response_headers);
-  container->duration_ms = millis() - start;
-  if (is_success(container->status_code)) {
-    return container;
+  if (container->content_length < 0)
+    container->status_code = container->content_length;
+  else {
+    container->feed_wdt();
+    container->status_code = esp_http_client_get_status_code(client);
+    container->feed_wdt();
+    container->set_response_headers(user_data.response_headers);
+    container->duration_ms = millis() - start;
+    if (is_success(container->status_code)) {
+      return container;
+    }
   }
-
   if (this->follow_redirects_) {
     auto num_redirects = this->redirect_limit_;
     while (is_redirect(container->status_code) && num_redirects > 0) {
@@ -206,7 +209,8 @@ std::shared_ptr<HttpContainer> HttpRequestIDF::perform(const std::string &url, c
 
   ESP_LOGE(TAG, "HTTP Request failed; URL: %s; Code: %d", url.c_str(), container->status_code);
   this->status_momentary_error("failed", 1000);
-  return container;
+  esp_http_client_cleanup(client);
+  return nullptr;
 }
 
 int HttpContainerIDF::read(uint8_t *buf, size_t max_len) {
