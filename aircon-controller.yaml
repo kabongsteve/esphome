@@ -30,10 +30,9 @@ logger:
     homeassistant.sensor: INFO
     main: INFO
 
-syslog:
-  port: 514
-  strip: true
-  #level: INFO
+# syslog:
+#   port: 514
+#   strip: true
 
 # Enable Home Assistant API
 api:
@@ -59,7 +58,7 @@ web_server:
   css_url: ""
   css_include: "./v2/webserver-v1.min.js"
   version: 2
-  log: false
+  log: true
 
 udp:
   addresses: 192.168.12.20
@@ -159,9 +158,9 @@ climate:
     min_cooling_run_time: 10s
     min_heating_off_time: 10s
     min_heating_run_time: 10s
-    cool_deadband: 0.5
+    cool_deadband: 0.2
     cool_overrun: 0.5
-    heat_deadband: 0.5
+    heat_deadband: 0.2
     heat_overrun: 0.5
     fan_with_cooling: true
     fan_with_heating: true
@@ -394,7 +393,10 @@ script:
                       }
                   }
           on_error:
-             - script.stop: check_daikin_info
+            - logger.log: 
+                level: WARN
+                format: "http error"
+            - script.stop: check_daikin_info
       - if:
           condition:
             lambda: |-
@@ -456,9 +458,13 @@ script:
                   return std::string(buf);
                 
                 capture_response: false
+                on_error:
+                  - logger.log: 
+                      level: WARN
+                      format: "http error"
 
 interval:
-  - interval: 60s
+  - interval: 30s
     startup_delay: 10s
     then:
       - script.execute: check_daikin_info

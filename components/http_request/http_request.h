@@ -15,8 +15,7 @@
 #include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
 
-namespace esphome {
-namespace http_request {
+namespace esphome::http_request {
 
 struct Header {
   std::string name;
@@ -255,18 +254,12 @@ template<typename... Ts> class HttpRequestSendAction : public Action<Ts...> {
         size_t read_index = 0;
         while (container->get_bytes_read() < max_length) {
           int read = container->read(buf + read_index, std::min<size_t>(max_length - read_index, 512));
-          if (read < 0) {
-            container = nullptr;
+          if (read <= 0) {
             break;
           }
           App.feed_wdt();
           yield();
           read_index += read;
-        }
-        if (container == nullptr) {
-          std::apply([this](Ts... captured_args_inner) { this->error_trigger_->trigger(captured_args_inner...); },
-                    captured_args);
-          return;
         }
         response_body.reserve(read_index);
         response_body.assign((char *) buf, read_index);
@@ -311,5 +304,4 @@ template<typename... Ts> class HttpRequestSendAction : public Action<Ts...> {
   size_t max_response_buffer_size_{SIZE_MAX};
 };
 
-}  // namespace http_request
-}  // namespace esphome
+}  // namespace esphome::http_request

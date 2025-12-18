@@ -633,6 +633,8 @@ sensor:
     id: level_image
     source_id: level_percent
     name: "TankLevel Image"
+    state_class: "measurement"
+    unit_of_measurement: "px"
     internal: true
     filters:
       - lambda: return (int)x * 4.8 + 12;

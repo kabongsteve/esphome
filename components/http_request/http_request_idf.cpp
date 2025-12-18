@@ -1,6 +1,6 @@
 #include "http_request_idf.h"
 
-#ifdef USE_ESP_IDF
+#ifdef USE_ESP32
 
 #include "esphome/components/network/util.h"
 #include "esphome/components/watchdog/watchdog.h"
@@ -14,8 +14,7 @@
 
 #include "esp_task_wdt.h"
 
-namespace esphome {
-namespace http_request {
+namespace esphome::http_request {
 
 static const char *const TAG = "http_request.idf";
 
@@ -228,8 +227,7 @@ int HttpContainerIDF::read(uint8_t *buf, size_t max_len) {
   this->feed_wdt();
   int read_len = esp_http_client_read(this->client_, (char *) buf, bufsize);
   this->feed_wdt();
-  if (read_len > 0)
-    this->bytes_read_ += read_len;
+  this->bytes_read_ += read_len;
 
   this->duration_ms += (millis() - start);
 
@@ -250,7 +248,6 @@ void HttpContainerIDF::feed_wdt() {
   }
 }
 
-}  // namespace http_request
-}  // namespace esphome
+}  // namespace esphome::http_request
 
-#endif  // USE_ESP_IDF
+#endif  // USE_ESP32
