@@ -214,7 +214,6 @@ std::shared_ptr<HttpContainer> HttpRequestIDF::perform(const std::string &url, c
         container->feed_wdt();
         container->status_code = esp_http_client_get_status_code(client);
         container->feed_wdt();
-        container->set_response_headers(user_data.response_headers);
         container->duration_ms = millis() - start;
         if (is_success(container->status_code)) {
           return container;
