@@ -154,19 +154,24 @@ std::shared_ptr<HttpContainer> HttpRequestIDF::perform(const std::string &url, c
   container->feed_wdt();
   int64_t result = esp_http_client_fetch_headers(client);
   if (result < 0) {
-    this->status_momentary_error("failed", 1000);
-    ESP_LOGE(TAG, "HTTP Request failed: %s", esp_err_to_name(result));
-    esp_http_client_cleanup(client);
-    return nullptr;
-  }
-  container->content_length = result;
-  container->feed_wdt();
-  container->status_code = esp_http_client_get_status_code(client);
-  container->feed_wdt();
-  container->set_response_headers(user_data.response_headers);
-  container->duration_ms = millis() - start;
-  if (is_success(container->status_code)) {
-    return container;
+    if (result == -ESP_ERR_HTTP_EAGAIN) {
+      container->status_code = ESP_ERR_HTTP_EAGAIN;
+    } else {
+      this->status_momentary_error("failed", 1000);
+      ESP_LOGE(TAG, "HTTP Request failed: %s", esp_err_to_name(result));
+      esp_http_client_cleanup(client);
+      return nullptr;
+    }
+  } else {
+    container->content_length = result;
+    container->feed_wdt();
+    container->status_code = esp_http_client_get_status_code(client);
+    container->feed_wdt();
+    container->set_response_headers(user_data.response_headers);
+    container->duration_ms = millis() - start;
+    if (is_success(container->status_code)) {
+      return container;
+    }
   }
 
   if (this->follow_redirects_) {
@@ -194,15 +199,27 @@ std::shared_ptr<HttpContainer> HttpRequestIDF::perform(const std::string &url, c
       }
 
       container->feed_wdt();
-      container->content_length = esp_http_client_fetch_headers(client);
-      container->feed_wdt();
-      container->status_code = esp_http_client_get_status_code(client);
-      container->feed_wdt();
-      container->duration_ms = millis() - start;
-      if (is_success(container->status_code)) {
-        return container;
+      result = esp_http_client_fetch_headers(client);
+      if (result < 0) {
+        if (result == -ESP_ERR_HTTP_EAGAIN) {
+          container->status_code = ESP_ERR_HTTP_EAGAIN;
+        } else {
+          this->status_momentary_error("failed", 1000);
+          ESP_LOGE(TAG, "HTTP Request failed: %s", esp_err_to_name(result));
+          esp_http_client_cleanup(client);
+          return nullptr;
+        }
+      } else {
+        container->content_length = result;
+        container->feed_wdt();
+        container->status_code = esp_http_client_get_status_code(client);
+        container->feed_wdt();
+        container->set_response_headers(user_data.response_headers);
+        container->duration_ms = millis() - start;
+        if (is_success(container->status_code)) {
+          return container;
+        }
       }
-
       num_redirects--;
     }
 
