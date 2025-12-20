@@ -168,7 +168,7 @@ std::shared_ptr<HttpContainer> HttpRequestIDF::perform(const std::string &url, c
   if (is_success(container->status_code)) {
     return container;
   }
-  
+
   if (this->follow_redirects_) {
     auto num_redirects = this->redirect_limit_;
     while (is_redirect(container->status_code) && num_redirects > 0) {
