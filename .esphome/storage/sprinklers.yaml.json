@@ -3,7 +3,7 @@
   "name": "sprinklers",
   "friendly_name": "Sprinklers",
   "comment": null,
-  "esphome_version": "2025.11.5",
+  "esphome_version": "2025.12.1",
   "src_version": 1,
   "address": "sprinklers.local",
   "web_port": 80,

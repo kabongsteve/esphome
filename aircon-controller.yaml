@@ -400,7 +400,7 @@ script:
       - if:
           condition:
             lambda: |-
-              if (id(daikin)["pow"] == 0 && id(ac).mode != CLIMATE_MODE_OFF && id(turned_on) != -1) {
+              if (id(daikin)["pow"] != id(daikin)["ac_pow"] && id(turned_on) != -1) {
                 int seconds_elapsed = id(homeassistant_time).now().timestamp - id(turned_on);
                 return seconds_elapsed > 120;
               }
@@ -408,10 +408,12 @@ script:
                 return 0;
 
           then:
-            - logger.log: Daikin turned off
+            - logger.log:
+                format: Daikin turned on or off
+                level: INFO
             - climate.control:
                 id: ac
-                mode: "OFF"
+                mode: !lambda 'return id(daikin)["pow"] == 0? "OFF": id(daikin)["mode"] == 0? "AUTO": id(daikin)["mode"] == 1? "HEAT": "COOL";'
             
       - if:
           condition:

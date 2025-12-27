@@ -212,6 +212,8 @@ display:
       it.printf(col1, base_y, id(tiny_font), "%4.1f", id(max_temp).state);
       if (NOT_NAN(id(min_temp).state))
         it.printf(col1, base_y + halfgap, id(tiny_font), "%4.1f", id(min_temp).state);
+      else
+        it.printf(col1, base_y + halfgap, id(tiny_font), "%4.1f", id(min_temp_tomorrow).state);
 
       value = id(outdoor_temperature).state;
       if (NOT_NAN(value))
@@ -241,9 +243,8 @@ display:
 
       it.print(col3, base_y, id(normal_font), weather_icon_color, "\U000F058F");
       value = id(tank_level).state;
-      float perc = value * 100 / 2200.0;
       if (NOT_NAN(value))
-        it.printf(col3 + gap, base_y, id(normal_font), "%3.0f%%", perc);
+        it.printf(col3 + gap, base_y, id(normal_font), "%3.0f%%", value);
 
       base_y += 30;
       base_y += rowgap - halfgap;
@@ -353,7 +354,7 @@ sensor:
   - platform: homeassistant
     name: tank_level
     id: tank_level
-    entity_id: sensor.sprinklers_tanklevel
+    entity_id: sensor.sprinklers_tanklevel_percent
   - platform: homeassistant
     name: Kitchen Temp
     id: kitchen_temp
@@ -382,6 +383,10 @@ sensor:
     name: Min Temp
     id: min_temp
     entity_id: sensor.wanniassa_temp_min_0
+  - platform: homeassistant
+    name: Min Temp Tomorrow
+    id: min_temp_tomorrow
+    entity_id: sensor.wanniassa_temp_min_1
   - platform: homeassistant
     name: Feels Like Temp
     id: feels_temp

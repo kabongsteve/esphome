@@ -41,7 +41,7 @@ psram:
 # Enable logging
 logger:
   baud_rate: 0
-  level: DEBUG
+  level: INFO
 
 # Enable Home Assistant API
 api:
@@ -259,263 +259,262 @@ lvgl:
               id: display_backlight
               brightness: 40%
   default_font: roboto32
-  top_layer:
-    widgets:
-      - obj:
-          id: main_screen
-          x: 0
-          y: 0
-          width: 100%
-          height: 100%
-          bg_color: black
-          text_color: aliceblue
-          bg_opa: COVER
-          radius: 0
-          pad_all: 0
-          border_width: 0
-          widgets:
-            - image:
-                id: water_img
-                src: water
-                mode: virtual
-                bg_image_opa: TRANSP
-                x: 0
-                y: 0
-                offset_x: 0
-                offset_y: -240
-                pad_all: 0
-                border_width: 0
-            - obj:
-                id: mode_0
-                x: 0
-                y: 0
-                width: 100%
-                height: 100%
-                bg_color: black
-                text_color: aliceblue
-                bg_opa: TRANSP
-                radius: 0
-                pad_all: 0
-                border_width: 0
-                widgets:
-                  - image:
-                      align: CENTER
-                      src: boot_logo
-                      bg_image_opa: TRANSP
-                      bg_opa: TRANSP
-            - obj:
-                id: mode_1
-                x: 0
-                y: 0
-                width: 100%
-                height: 100%
-                bg_color: black
-                text_color: aliceblue
-                bg_opa: TRANSP
-                radius: 0
-                pad_all: 0
-                border_width: 0
-                widgets:
-                  - roller:
-                      id: source_roller
-                      align: center
-                      text_font: roboto64
-                      text_color: aliceblue
-                      pad_all: 0
-                      border_width: 0
-                      # max_height: 72
-                      bg_opa: 50%
-                      bg_color: black
-                      mode: INFINITE
-                      options:
-                        - "Hose"
-                        - "Garden"
-                        - "Front"
-                        - "Fence"
-                        - "Hose (M)"
-                        - "Garden (M)"
-                        - "Front (M)"
-                        - "Fence (M)"
-                      selected_index: 0
-                      visible_row_count: 3
-            - obj:
-                id: mode_2
-                x: 0
-                y: 0
-                width: 100%
-                height: 100%
-                bg_color: black
-                text_color: aliceblue
-                bg_opa: TRANSP
-                radius: 0
-                pad_all: 0
-                border_width: 0
-                widgets:
-                  - meter:
-                      align: center
-                      pad_all: 0
-                      border_width: 0
-                      bg_opa: TRANSP
-                      bg_color: black
-                      text_color: aliceblue
-                      width: 100%
-                      height: 100%
-                      scales:
-                        range_from: 5
-                        range_to: 125
-                        angle_range: 240
-                        rotation: 150
-                        ticks:
-                          count: 25
-                          length: 64 
+  widgets:
+    - obj:
+        id: main_screen
+        x: 0
+        y: 0
+        width: 100%
+        height: 100%
+        bg_color: black
+        text_color: aliceblue
+        bg_opa: COVER
+        radius: 0
+        pad_all: 0
+        border_width: 0
+        widgets:
+          - image:
+              id: water_img
+              src: water
+              mode: virtual
+              bg_image_opa: TRANSP
+              x: 0
+              y: 0
+              offset_x: 0
+              offset_y: -240
+              pad_all: 0
+              border_width: 0
+          - obj:
+              id: mode_0
+              x: 0
+              y: 0
+              width: 100%
+              height: 100%
+              bg_color: black
+              text_color: aliceblue
+              bg_opa: TRANSP
+              radius: 0
+              pad_all: 0
+              border_width: 0
+              widgets:
+                - image:
+                    align: CENTER
+                    src: boot_logo
+                    bg_image_opa: TRANSP
+                    bg_opa: TRANSP
+          - obj:
+              id: mode_1
+              x: 0
+              y: 0
+              width: 100%
+              height: 100%
+              bg_color: black
+              text_color: aliceblue
+              bg_opa: TRANSP
+              radius: 0
+              pad_all: 0
+              border_width: 0
+              widgets:
+                - roller:
+                    id: source_roller
+                    align: center
+                    text_font: roboto64
+                    text_color: aliceblue
+                    pad_all: 0
+                    border_width: 0
+                    # max_height: 72
+                    bg_opa: 50%
+                    bg_color: black
+                    mode: INFINITE
+                    options:
+                      - "Hose"
+                      - "Garden"
+                      - "Front"
+                      - "Fence"
+                      - "Hose (M)"
+                      - "Garden (M)"
+                      - "Front (M)"
+                      - "Fence (M)"
+                    selected_index: 0
+                    visible_row_count: 3
+          - obj:
+              id: mode_2
+              x: 0
+              y: 0
+              width: 100%
+              height: 100%
+              bg_color: black
+              text_color: aliceblue
+              bg_opa: TRANSP
+              radius: 0
+              pad_all: 0
+              border_width: 0
+              widgets:
+                - meter:
+                    align: center
+                    pad_all: 0
+                    border_width: 0
+                    bg_opa: TRANSP
+                    bg_color: black
+                    text_color: aliceblue
+                    width: 100%
+                    height: 100%
+                    scales:
+                      range_from: 5
+                      range_to: 125
+                      angle_range: 240
+                      rotation: 150
+                      ticks:
+                        count: 25
+                        length: 64 
+                        width: 4
+                        major:
+                          stride: 2
+                          length: 15
                           width: 4
-                          major:
-                            stride: 2
-                            length: 15
+                          label_gap: 25
+                      indicators:
+                        - arc:
+                            id: level_arc
+                            width: 100
+                            start_value: 5
+                            end_value: 15
+                            r_mod: -10
+                            opa: 75%
+                            color: lawngreen
+                        - tick_style:
+                            start_value: 5
+                            end_value: 125
                             width: 4
-                            label_gap: 25
-                        indicators:
-                          - arc:
-                              id: level_arc
-                              width: 100
-                              start_value: 5
-                              end_value: 15
-                              r_mod: -10
-                              opa: 75%
-                              color: lawngreen
-                          - tick_style:
-                              start_value: 5
-                              end_value: 125
-                              width: 4
-                              local: false
-                              color_start: darkorange
-                              color_end: blue
-                  - label:
-                      pad_all: 0
-                      border_width: 0
-                      id: runtime_lbl
-                      align: CENTER
-                      y: 0
-                      text_font: roboto64
-                      text_color: darkorange
-            - obj:
-                id: mode_3
-                x: 0
-                y: 0
-                width: 100%
-                height: 100%
-                bg_color: black
-                text_color: aliceblue
-                bg_opa: 25%
-                radius: 0
-                pad_all: 0
-                border_width: 0
-                widgets:
-                  - label:
-                      pad_all: 0
-                      border_width: 0
-                      id: valve_lbl
-                      align: CENTER
-                      y: -50
-                      text_font: roboto96
-                      text_color: green
-                  - label:
-                      pad_all: 0
-                      border_width: 0
-                      id: elapsed_lbl
-                      align: CENTER
-                      y: 50
-                      text_font: roboto96
-                      text_color: darkorange
-                  - meter:
-                      align: center
-                      pad_all: 0
-                      border_width: 0
-                      bg_opa: TRANSP
-                      bg_color: black
-                      text_color: aliceblue
-                      width: 100%
-                      height: 100%
-                      scales:
-                        range_from: 5
-                        range_to: 125
-                        angle_range: 240
-                        rotation: 150
-                        ticks:
-                          count: 25
-                          length: 64 
+                            local: false
+                            color_start: darkorange
+                            color_end: blue
+                - label:
+                    pad_all: 0
+                    border_width: 0
+                    id: runtime_lbl
+                    align: CENTER
+                    y: 0
+                    text_font: roboto64
+                    text_color: darkorange
+          - obj:
+              id: mode_3
+              x: 0
+              y: 0
+              width: 100%
+              height: 100%
+              bg_color: black
+              text_color: aliceblue
+              bg_opa: 25%
+              radius: 0
+              pad_all: 0
+              border_width: 0
+              widgets:
+                - label:
+                    pad_all: 0
+                    border_width: 0
+                    id: valve_lbl
+                    align: CENTER
+                    y: -50
+                    text_font: roboto96
+                    text_color: green
+                - label:
+                    pad_all: 0
+                    border_width: 0
+                    id: elapsed_lbl
+                    align: CENTER
+                    y: 50
+                    text_font: roboto96
+                    text_color: darkorange
+                - meter:
+                    align: center
+                    pad_all: 0
+                    border_width: 0
+                    bg_opa: TRANSP
+                    bg_color: black
+                    text_color: aliceblue
+                    width: 100%
+                    height: 100%
+                    scales:
+                      range_from: 5
+                      range_to: 125
+                      angle_range: 240
+                      rotation: 150
+                      ticks:
+                        count: 25
+                        length: 64 
+                        width: 4
+                        major:
+                          stride: 2
+                          length: 15
                           width: 4
-                          major:
-                            stride: 2
-                            length: 15
+                          label_gap: 25
+                      indicators:
+                        - arc:
+                            id: remaining_arc
+                            width: 40
+                            start_value: 5
+                            end_value: 125
+                            r_mod: -10
+                            opa: 75%
+                            color: lawngreen
+                        - tick_style:
+                            start_value: 5
+                            end_value: 125
                             width: 4
-                            label_gap: 25
-                        indicators:
-                          - arc:
-                              id: remaining_arc
-                              width: 40
-                              start_value: 5
-                              end_value: 125
-                              r_mod: -10
-                              opa: 75%
-                              color: lawngreen
-                          - tick_style:
-                              start_value: 5
-                              end_value: 125
-                              width: 4
-                              local: false
-                              color_start: darkorange
-                              color_end: blue
+                            local: false
+                            color_start: darkorange
+                            color_end: blue
 
-            - label:
-                pad_all: 0
-                border_width: 0
-                id: tank_lbl
-                align: TOP_MID
-                y: 60
-                text_font: roboto64
-                text_color: blue
-                text: ""
-            - label:
-                pad_all: 0
-                border_width: 0
-                id: status_lbl
-                align: BOTTOM_MID
-                y: -10
-                text_font: roboto48
-                text_color: red
-                text: "Starting..."
-            - label:
-                pad_all: 0
-                border_width: 0
-                id: wifi_lbl
-                align: BOTTOM_MID
-                y: -60
-                text_font: roboto32
-                text_color: blue
-                text: "Connecting..."
+          - label:
+              pad_all: 0
+              border_width: 0
+              id: tank_lbl
+              align: TOP_MID
+              y: 75
+              text_font: roboto64
+              text_color: blue
+              text: ""
+          - label:
+              pad_all: 0
+              border_width: 0
+              id: status_lbl
+              align: BOTTOM_MID
+              y: -10
+              text_font: roboto48
+              text_color: red
+              text: "Starting..."
+          - label:
+              pad_all: 0
+              border_width: 0
+              id: wifi_lbl
+              align: BOTTOM_MID
+              y: -60
+              text_font: roboto32
+              text_color: blue
+              text: "Connecting..."
 
 
-      - obj:
-          id: block_touch
-          x: 0
-          y: 0
-          width: 100%
-          height: 100%
-          bg_color: black
-          bg_opa: TRANSP
-          radius: 0
-          pad_all: 0
-          border_width: 0
-          widgets:
-            - label:
-                x: 0
-                y: 0
-                width: 100%
-                height: 100%
-                bg_color: black
-                bg_opa: TRANSP
-                text: ""
+    - obj:
+        id: block_touch
+        x: 0
+        y: 0
+        width: 100%
+        height: 100%
+        bg_color: black
+        bg_opa: TRANSP
+        radius: 0
+        pad_all: 0
+        border_width: 0
+        widgets:
+          - label:
+              x: 0
+              y: 0
+              width: 100%
+              height: 100%
+              bg_color: black
+              bg_opa: TRANSP
+              text: ""
 
 
 number:
@@ -627,7 +626,7 @@ sensor:
     unit_of_measurement: "%"
     accuracy_decimals: 1
     filters:
-      - lambda: return x / 24;
+      - lambda: return (x * 100) / id(capacity).state;
 
   - platform: copy 
     id: level_image

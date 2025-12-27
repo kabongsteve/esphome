@@ -96,7 +96,7 @@ touchscreen:
         condition:
           switch.is_on: machine
         then:
-          - lvgl.page.show: eyeball_page #thermometer_page
+          - lvgl.page.show: thermometer_page
         else:
           - script.execute: dim_delay
 
@@ -134,15 +134,6 @@ font:
         "\U000F0425"    # mdi-power
       ]
 
-# image:
-#   - file: img/eyeball.jpg
-#     id: eyeball
-#     type: RGB565
-#     transparency: alpha_channel
-animation:
-  - file: "img/eyeball.gif"
-    id: eyeball
-    type: RGB565
 
 lvgl:
   pages:
@@ -300,29 +291,6 @@ lvgl:
                   text_font: roboto80
                   bg_color: Black
                   text_color: blue
-    - id: eyeball_page
-      x: 0
-      y: 0
-      width: 100%
-      height: 100%
-      bg_color: black
-      text_color: aliceblue
-      bg_opa: COVER
-      radius: 0
-      pad_all: 0
-      border_width: 0
-      widgets:
-        - image:
-            id: eyeball_img
-            src: eyeball
-            mode: VIRTUAL
-            bg_image_opa: TRANSP
-            x: 0
-            y: 0
-            offset_x: 0
-            offset_y: 0
-            pad_all: 0
-            border_width: 0
 
 time:
   - platform: homeassistant
@@ -402,6 +370,8 @@ sensor:
           min_value: 0.1
           max_value: 3.2
           ignore_out_of_range: true
+      - round_to_multiple_of: 0.025
+
   - platform: template
     id: temperature
     name: "Temperature"
@@ -418,8 +388,8 @@ sensor:
       return result;
     filters:
       - exponential_moving_average:
-          alpha: 0.2
-          send_every: 5
+          alpha: 0.1
+          send_every: 15
           send_first_at: 5
     update_interval: 0.1s
       
@@ -479,7 +449,6 @@ script:
       - light.control:
           id: backlight
           brightness: "80%"
-      - lvgl.page.show: eyeball_page
       - if:
           all:
             - lambda: 'return isnan(id(kitchen_light).state);'
