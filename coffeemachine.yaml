@@ -5,12 +5,24 @@ esphome:
     - light.control:
         id: backlight
         brightness: "80%"
+  platformio_options:
+    build_flags: "-DBOARD_HAS_PSRAM"
 
 esp32:
-  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  flash_size: 8MB
+  cpu_frequency: 240MHz
+#  board: esp32-s3-devkitc-1
   framework:
     type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: y
+      CONFIG_ESP32S3_DATA_CACHE_64KB: y
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS: y
+      CONFIG_SPIRAM_RODATA: y
 
+external_components:
+  - source: components
 
 psram:
   mode: octal
@@ -19,6 +31,7 @@ psram:
 # Enable logging
 logger:
   baud_rate: 0
+  level: INFO
 
 # Enable Home Assistant API
 api:
@@ -89,9 +102,9 @@ touchscreen:
     swap_xy: true
     mirror_x: true
   on_touch:
-    - logger.log:
-        format: "Touch %d %d"
-        args: [ 'touch.x', 'touch.y']    
+    # - logger.log:
+    #     format: "Touch %d %d"
+    #     args: [ 'touch.x', 'touch.y']    
     - if:
         condition:
           switch.is_on: machine
@@ -101,16 +114,6 @@ touchscreen:
           - script.execute: dim_delay
 
 font:
-  # - file: "gfonts://Roboto"
-  #   id: roboto24
-  #   size: 24
-  #   bpp: 4
-  #   glyphsets: GF_Latin_Core
-  # - file: "gfonts://Roboto"
-  #   id: roboto32
-  #   size: 32
-  #   bpp: 4
-  #   glyphsets: GF_Latin_Core
   - file: "gfonts://Roboto"
     id: roboto48
     size: 40
@@ -312,11 +315,12 @@ binary_sensor:
     y_min: 180
     y_max: 220
     on_press:
-      - if:
-          condition:
-            switch.is_off: machine
-          then:
-            - switch.turn_on: machine
+      - switch.toggle: machine
+      # - if:
+      #     condition:
+      #       switch.is_off: machine
+      #     then:
+      #       - switch.turn_on: machine
 
 
 globals:
@@ -441,6 +445,13 @@ switch:
       - light.control:
           id: backlight
           brightness: "80%"
+    on_state:
+      - lambda: !lambda |-
+          int interval = x? 100: 10000;
+          id(temp_sensor).set_update_interval(interval);
+          id(temp_sensor).call_setup();
+          id(temperature).set_update_interval(interval);
+          id(temperature).call_setup();
 
 script:
   - id: dim_delay

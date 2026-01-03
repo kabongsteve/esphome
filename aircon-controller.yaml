@@ -143,6 +143,15 @@ sensor:
   - platform: wifi_signal
     name: "WiFi Signal Sensor"
     update_interval: 60s
+  - platform: template
+    id: daikin_temp
+    name: "Daikin Temp"
+    unit_of_measurement: "°C"
+    device_class: "temperature"
+    state_class: "measurement"
+    accuracy_decimals: 0
+    lambda: |-
+      return (float)id(daikin)["htemp"];
 
 text_sensor:
   - platform: debug
@@ -159,9 +168,9 @@ climate:
     min_heating_off_time: 10s
     min_heating_run_time: 10s
     cool_deadband: 0.2
-    cool_overrun: 0.5
+    cool_overrun: 0.3
     heat_deadband: 0.2
-    heat_overrun: 0.5
+    heat_overrun: 0.3
     fan_with_cooling: true
     fan_with_heating: true
     min_fan_mode_switching_time: 1s
@@ -375,6 +384,25 @@ script:
             id(mode_changed)->execute();
 
       - http_request.get:
+          url: !lambda 'return id(url) + "get_sensor_info";'
+          capture_response: true
+          on_response:
+            then:
+              - lambda: |-
+                  std::stringstream ss(body);
+                  std::string segment;
+
+                  //ESP_LOGD("custom", body.c_str());
+                  while (std::getline(ss, segment, ',')) {
+                      size_t equals_pos = segment.find('=');
+                      if (equals_pos != std::string::npos) {
+                          std::string key = segment.substr(0, equals_pos);
+                          int value = atoi(segment.substr(equals_pos + 1).c_str());
+                          ESP_LOGV("custom", "%s:%d", key.c_str(), value);
+                          id(daikin).set(key, value);
+                      }
+                  }
+      - http_request.get:
           url: !lambda 'return id(url) + "get_control_info";'
           capture_response: true
           on_response:
@@ -413,7 +441,7 @@ script:
                 level: INFO
             - climate.control:
                 id: ac
-                mode: !lambda 'return id(daikin)["pow"] == 0? "OFF": id(daikin)["mode"] == 0? "AUTO": id(daikin)["mode"] == 1? "HEAT": "COOL";'
+                mode: !lambda 'return id(daikin)["pow"] == 0? CLIMATE_MODE_OFF: id(daikin)["mode"] == 0? CLIMATE_MODE_HEAT_COOL: id(daikin)["mode"] == 1? CLIMATE_MODE_HEAT: CLIMATE_MODE_COOL;'
             
       - if:
           condition:
@@ -470,3 +498,4 @@ interval:
     startup_delay: 10s
     then:
       - script.execute: check_daikin_info
+      - component.update: daikin_temp

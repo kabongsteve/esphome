@@ -877,7 +877,17 @@ void Sprinkler::start_single_valve(const optional<size_t> valve_number, optional
 void Sprinkler::set_current_valve_duration(uint32_t run_duration) {
 
   if (this->active_req_.has_request()) {
+
     this->active_req_.valve_operator()->set_run_duration(run_duration);
+
+    auto remains = this->active_req_.valve_operator()->time_remaining();
+    if (remains) {
+      this->set_timer_duration_(sprinkler::TIMER_SM, remains);
+      this->start_timer_(sprinkler::TIMER_SM);
+    } else {
+      this->cancel_timer_(sprinkler::TIMER_SM);
+      this->sm_timer_callback_();
+    }
     return;
   }
 }

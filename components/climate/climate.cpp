@@ -453,14 +453,14 @@ void Climate::publish_state() {
   if (traits.get_supports_swing_modes()) {
     nxt += std::snprintf(buf + nxt, sizeof(buf) - nxt, ", Swing Mode(%s)", LOG_STR_ARG(climate_swing_mode_to_string(this->swing_mode)));
   }
-  if (traits.has_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE)) {
-    nxt += std::snprintf(buf + nxt, sizeof(buf) - nxt, ",  Current Temperature(%.2f°C)", this->current_temperature);
-  }
   if (traits.has_feature_flags(CLIMATE_SUPPORTS_TWO_POINT_TARGET_TEMPERATURE |
                                CLIMATE_REQUIRES_TWO_POINT_TARGET_TEMPERATURE)) {
-    nxt += std::snprintf(buf + nxt, sizeof(buf) - nxt, ", Target Temperature Low(%.2f°C) High(%.2f°C)", this->target_temperature_low, this->target_temperature_high);
+    nxt += std::snprintf(buf + nxt, sizeof(buf) - nxt, ", Target Temperature Low(%.1f°C) High(%.1f°C)", this->target_temperature_low, this->target_temperature_high);
   } else {
-    nxt += std::snprintf(buf + nxt, sizeof(buf) - nxt, ", Target Temperature(%.2f°C)", this->target_temperature);
+    nxt += std::snprintf(buf + nxt, sizeof(buf) - nxt, ", Target Temperature(%.1f°C)", this->target_temperature);
+  }
+  if (traits.has_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE)) {
+    nxt += std::snprintf(buf + nxt, sizeof(buf) - nxt, ",  Current Temperature(%.1f°C)", this->current_temperature);
   }
   if (traits.has_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_HUMIDITY)) {
     nxt += std::snprintf(buf + nxt, sizeof(buf) - nxt, ",  Current Humidity(%.0f%%)", this->current_humidity);
