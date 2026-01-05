@@ -392,8 +392,8 @@ sensor:
       return result;
     filters:
       - exponential_moving_average:
-          alpha: 0.1
-          send_every: 15
+          alpha: 0.2
+          send_every: 10
           send_first_at: 5
     update_interval: 0.1s
       
@@ -412,23 +412,24 @@ sensor:
             return c;
       - lambda: |-
           int wholeDeg = int(floor(x));
-          if (id(lastState) != wholeDeg) {
-            id(lastState) = wholeDeg;
-            id(steadyState) = id(steadyCount);
-            id(changeCount) += 1;
+          if (id(machine).state)
+          {
+            if (id(lastState) != wholeDeg) {
+              id(lastState) = wholeDeg;
+              id(steadyState) = id(steadyCount);
+              id(changeCount) += 1;
 
-          }
-          else {
-            id(steadyState) -= 1;
-            id(changeCount) = 0;
-          }
-          if (id(steadyState) == 0) {
-            lvgl_lvglcomponent_id->show_page(clock_page->index, LV_SCR_LOAD_ANIM_NONE, 50);
-            id (dim_delay).execute();
-          }
-          if (id(changeCount) > 2) {
-            lvgl_lvglcomponent_id->show_page(thermometer_page->index, LV_SCR_LOAD_ANIM_NONE, 50);
-            id (dim_delay).execute();
+            }
+            else {
+              id(steadyState) -= 1;
+              id(changeCount) = 0;
+            }
+            if (id(steadyState) == 0) {
+              lvgl_lvglcomponent_id->show_page(clock_page->index, LV_SCR_LOAD_ANIM_NONE, 50);
+            }
+            if (id(changeCount) > 2) {
+              lvgl_lvglcomponent_id->show_page(thermometer_page->index, LV_SCR_LOAD_ANIM_NONE, 50);
+            }
           }
 
 switch:

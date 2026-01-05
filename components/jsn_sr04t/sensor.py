@@ -41,7 +41,7 @@ CONFIG_SCHEMA = (
 FINAL_VALIDATE_SCHEMA = uart.final_validate_device_schema(
     "jsn_sr04t",
     baud_rate=9600,
-    require_tx=True,
+    require_tx=False,
     require_rx=True,
     data_bits=8,
     parity=None,

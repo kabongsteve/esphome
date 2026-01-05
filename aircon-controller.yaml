@@ -60,30 +60,11 @@ web_server:
   version: 2
   log: true
 
-udp:
-  addresses: 192.168.12.20
-  port:
-    listen_port: 8666
-    broadcast_port: 18511
-
-  on_receive: 
-    then:
-      - logger.log: 
-          format: "%s Rebooting..."
-          args: [ 'std::string(data.begin(), data.end()).c_str()' ]
-          level: WARN
-      - if:
-          condition:
-            lambda: 'return std::string(data.begin(), data.end()).starts_with("RESTART");'
-          then:
-            - delay: 2s
-            - button.press: reboot_now
-
 debug:
 
 number:
   - platform: template
-    name: Master Offset
+    name: Offset Master 
     optimistic: True
     min_value: -5
     max_value: 5
@@ -92,7 +73,7 @@ number:
     restore_value: true
   - platform: template
     id: heat_offset
-    name: Heat Offset
+    name: Offset Heat
     optimistic: True
     min_value: 0
     max_value: 10
@@ -100,7 +81,7 @@ number:
     initial_value: 4
     restore_value: true
   - platform: template
-    name: Cool Offset
+    name: Offset Cool
     id: cool_offset
     optimistic: True
     min_value: -10
@@ -138,6 +119,7 @@ output:
 
 sensor:
   - platform: homeassistant
+    name: Temp House 
     id: house_temp
     entity_id: sensor.house_temp
   - platform: wifi_signal
@@ -145,7 +127,7 @@ sensor:
     update_interval: 60s
   - platform: template
     id: daikin_temp
-    name: "Daikin Temp"
+    name: Temp Daikin
     unit_of_measurement: "°C"
     device_class: "temperature"
     state_class: "measurement"
@@ -163,10 +145,10 @@ climate:
     id: ac
     name: "AC"
     sensor: house_temp
-    min_cooling_off_time: 10s
-    min_cooling_run_time: 10s
-    min_heating_off_time: 10s
-    min_heating_run_time: 10s
+    min_cooling_off_time: 1s
+    min_cooling_run_time: 1s
+    min_heating_off_time: 1s
+    min_heating_run_time: 1s
     cool_deadband: 0.2
     cool_overrun: 0.3
     heat_deadband: 0.2
@@ -285,16 +267,6 @@ http_request:
   timeout: 10s
   verify_ssl: false
 
-button:
-  - platform: restart
-    id: reboot_now
-    name: "Ac Controller Restart"
-    on_press: 
-      then:
-        - logger.log: 
-            level: WARN
-            format: Rebooting...
-
 mapping:
   - id: daikin
     from: string
@@ -356,12 +328,6 @@ script:
             id(daikin).set("ac_pow", 0);
             id(daikin).set("ac_mode", 0);
           }
-          if (id(ac).action == CLIMATE_ACTION_IDLE || id(ac).action == CLIMATE_ACTION_OFF) {
-            id(daikin).set("ac_idle", -2);
-          }
-          else
-            id(daikin).set("ac_idle", 1);
-
           if (id(ac).fan_mode == CLIMATE_FAN_LOW)
               id(daikin).set("ac_fan", 1);
           else if (id(ac).fan_mode == CLIMATE_FAN_MEDIUM)
@@ -370,6 +336,13 @@ script:
               id(daikin).set("ac_fan", 5);
           else
               id(daikin).set("ac_fan", 0);
+
+          if (id(ac).action == CLIMATE_ACTION_IDLE || id(ac).action == CLIMATE_ACTION_OFF) {
+            id(daikin).set("ac_idle", -2);
+            id(daikin).set("ac_fan", 1);
+          }
+          else
+            id(daikin).set("ac_idle", 1);
 
 
   - id: check_daikin_info
@@ -475,8 +448,8 @@ script:
                       level: DEBUG
           else:
             - logger.log:
-                format: "Update Daikin %d, %d, %d"
-                args: ['id(daikin)["ac_temp"] + (id(daikin)["ac_idle"] * id(daikin)["ac_offset"])', 'id(daikin)["ac_mode"]', 'id(daikin)["ac_pow"]']
+                format: "Update Daikin %d, %d, %d, %d"
+                args: ['id(daikin)["ac_temp"] + (id(daikin)["ac_idle"] * id(daikin)["ac_offset"])', 'id(daikin)["ac_mode"]', 'id(daikin)["ac_pow"]', 'id(daikin)["ac_fan"]']
                 level: INFO
             - http_request.get:
                 url: !lambda |-

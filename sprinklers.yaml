@@ -84,6 +84,12 @@ spi:
   mosi_pin: GPIO0
   clk_pin: GPIO46
 
+
+uart:
+  rx_pin: GPIO44
+#  tx_pin: GPIO43
+  baud_rate: 9600
+
 pcf8574:
   - id: relays
     i2c_id: i2c_bus
@@ -302,6 +308,14 @@ lvgl:
                     src: boot_logo
                     bg_image_opa: TRANSP
                     bg_opa: TRANSP
+                - label:
+                    pad_all: 0
+                    border_width: 0
+                    id: last_usage_lbl
+                    align: CENTER
+                    y: 120
+                    text_font: roboto48
+                    text_color: blue
           - obj:
               id: mode_1
               x: 0
@@ -328,13 +342,11 @@ lvgl:
                     mode: INFINITE
                     options:
                       - "Hose"
-                      - "Garden"
                       - "Front"
                       - "Fence"
-                      - "Hose (M)"
-                      - "Garden (M)"
-                      - "Front (M)"
                       - "Fence (M)"
+                      - "Front (M)"
+                      - "Hose (M)"
                     selected_index: 0
                     visible_row_count: 3
           - obj:
@@ -426,6 +438,14 @@ lvgl:
                     y: 50
                     text_font: roboto96
                     text_color: darkorange
+                - label:
+                    pad_all: 0
+                    border_width: 0
+                    id: usage_lbl
+                    align: CENTER
+                    y: 120
+                    text_font: roboto48
+                    text_color: blue
                 - meter:
                     align: center
                     pad_all: 0
@@ -575,15 +595,21 @@ number:
               format: "%.0f min"
               args: [ id(run_duration).state ]
 
+  # - platform: template
+  #   id: usage
+  #   name: "Usage"
+  #   unit_of_measurement: "lt"
+  #   optimistic: true
+  #   min_value: 0
+  #   max_value: 2000000
+  #   step: 0.00222222222
+  #   initial_value: 0
+  #   restore_value: true
+
 
 # --------------------------------------
 # -            SENSORS                 -
 # --------------------------------------
-
-uart:
-  rx_pin: GPIO44
-  tx_pin: GPIO43
-  baud_rate: 9600
 
 sensor:
 
@@ -597,6 +623,33 @@ sensor:
           window_size: 60
           send_every: 180
       - filter_out: NAN
+
+  - platform: pulse_meter
+    pin: GPIO43
+    timeout: 5s
+    id: flow_rate
+    name: Flow Rate
+    unit_of_measurement: 'L/min'
+    state_class: measurement
+    device_class: volume_flow_rate
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.00222222222
+      - sliding_window_moving_average:
+          window_size: 15
+          send_every: 30
+          send_first_at: 5
+    total:
+      name: Usage
+      id: usage
+      accuracy_decimals: 1
+      unit_of_measurement: 'L'
+      state_class: measurement
+      device_class: water
+      filters:
+        - multiply: 0.00222222222
+        - throttle: 1s
+
 
   - platform: copy
     source_id: tanklevel
@@ -679,7 +732,7 @@ sensor:
           then:
             - select.operation:
                 id: source
-                operation: next
+                operation: previous
                 cycle: true
       - if:
           condition: 
@@ -717,7 +770,7 @@ sensor:
           then:
             - select.operation:
                 id: source
-                operation: previous
+                operation: next
                 cycle: true
       - if:
           condition: 
@@ -743,6 +796,7 @@ sensor:
                         run_duration: !lambda 'return id(sprinklers).time_remaining_active_valve().value() - 300;'
 
 binary_sensor:
+        
   - platform: gpio
     name: Button
     id: front_button
@@ -789,6 +843,65 @@ binary_sensor:
         - select.set_index:
             id: mode
             index: 0
+
+
+
+switch:
+  - platform: gpio
+    id: pump
+    pin:
+      pcf8574: relays
+      number: 7
+      inverted: true
+    interlock: [mains]
+    internal: true
+  - platform: gpio
+    id: mains
+    pin:
+      pcf8574: relays
+      number: 6
+      inverted: true
+    interlock: [pump]
+    internal: true
+  - platform: gpio
+    id: hose
+    pin:
+      pcf8574: relays
+      number: 5
+      inverted: true
+    internal: true
+  - platform: gpio
+    id: garden
+    pin:
+      pcf8574: relays
+      number: 4
+      inverted: true
+    internal: true
+  - platform: gpio
+    id: front
+    pin:
+      pcf8574: relays
+      number: 3
+      inverted: true
+    internal: true
+  - platform: gpio
+    id: fence
+    pin:
+      pcf8574: relays
+      number: 2
+      inverted: true
+    internal: true
+  - platform: gpio
+    id: back
+    pin:
+      pcf8574: relays
+      number: 1
+      inverted: true
+    internal: true
+  - platform: template
+    id: advance
+    internal: true
+    optimistic: true
 
 select:
   - platform: lvgl
@@ -872,71 +985,6 @@ button:
                 index: 3
         
 
-
-switch:
-  - platform: gpio
-    id: pump
-    pin:
-      pcf8574: relays
-      number: 7
-      inverted: true
-    interlock: [mains]
-    internal: true
-  - platform: gpio
-    id: mains
-    pin:
-      pcf8574: relays
-      number: 6
-      inverted: true
-    interlock: [pump]
-    internal: true
-  - platform: gpio
-    id: hose
-    pin:
-      pcf8574: relays
-      number: 5
-      inverted: true
-    internal: true
-  - platform: gpio
-    id: garden
-    pin:
-      pcf8574: relays
-      number: 4
-      inverted: true
-    internal: true
-  - platform: gpio
-    id: front
-    pin:
-      pcf8574: relays
-      number: 3
-      inverted: true
-    internal: true
-  - platform: gpio
-    id: fence
-    pin:
-      pcf8574: relays
-      number: 2
-      inverted: true
-    internal: true
-  - platform: gpio
-    id: back
-    pin:
-      pcf8574: relays
-      number: 1
-      inverted: true
-    internal: true
-  - platform: gpio
-    id: empty2
-    pin:
-      pcf8574: relays
-      number: 0
-      inverted: true
-    internal: true
-  - platform: template
-    id: advance
-    internal: true
-    optimistic: true
-
 sprinkler:
   - id: sprinklers
     auto_advance_switch: advance
@@ -947,8 +995,15 @@ sprinkler:
         - select.set_index: 
             id: mode
             index: 0
+        - lvgl.label.update:
+            id: last_usage_lbl
+            text: !lambda return id(usage_txt).state;
       on_turn_on:
+        - pulse_meter.set_total_pulses:
+            id: flow_rate
+            value: 0
         - component.update: valve_name
+        - component.update: usage_txt
         - lvgl.label.update:
             id: valve_lbl
             text: !lambda return id(valve_name).state;
@@ -956,6 +1011,9 @@ sprinkler:
         - lvgl.label.update:
             id: elapsed_lbl
             text: !lambda return id(time_remaining).state;
+        - lvgl.label.update:
+            id: usage_lbl
+            text: !lambda return id(usage_txt).state;
         - select.set_index:
             id: mode
             index: 3
@@ -967,10 +1025,6 @@ sprinkler:
         valve_switch_id: hose
         pump_switch_id: pump
         run_duration: 900s
-      - valve_switch: "Garden"
-        valve_switch_id: garden
-        pump_switch_id: pump
-        run_duration: 900s
       - valve_switch: "Front"
         valve_switch_id: front
         pump_switch_id: pump
@@ -979,20 +1033,24 @@ sprinkler:
         valve_switch_id: fence
         pump_switch_id: pump
         run_duration: 900s
-      - valve_switch: "Hose M"
-        valve_switch_id: hose
-        pump_switch_id: mains
-        run_duration: 900s
-      - valve_switch: "Garden M"
-        valve_switch_id: garden
+      - valve_switch: "Fence M"
+        valve_switch_id: fence
         pump_switch_id: mains
         run_duration: 900s
       - valve_switch: "Front M"
         valve_switch_id: front
         pump_switch_id: mains
         run_duration: 900s
-      - valve_switch: "Fence M"
-        valve_switch_id: fence
+      - valve_switch: "Hose M"
+        valve_switch_id: hose
+        pump_switch_id: mains
+        run_duration: 900s
+      - valve_switch: "Garden"
+        valve_switch_id: garden
+        pump_switch_id: pump
+        run_duration: 900s
+      - valve_switch: "Garden M"
+        valve_switch_id: garden
         pump_switch_id: mains
         run_duration: 900s
 
@@ -1001,6 +1059,7 @@ interval:
     startup_delay: 5s
     then:
       - component.update: tanklevel
+      - component.update: usage_txt
       - lvgl.label.update:
           id: tank_lbl
           text:
@@ -1023,9 +1082,13 @@ interval:
                   - switch.turn_on: mains
             - component.update: time_remaining
             - component.update: state
+            - component.update: usage_txt
             - lvgl.label.update:
                 id: elapsed_lbl
                 text: !lambda return id(time_remaining).state;
+            - lvgl.label.update:
+                id: usage_lbl
+                text: !lambda return id(usage_txt).state;
             - lvgl.indicator.update:
                 id: remaining_arc
                 end_value: !lambda 'return id(sprinklers).time_remaining_active_valve().value() / 60;'
@@ -1063,6 +1126,13 @@ text_sensor:
       auto name = id(sprinklers).valve_name(active);
       char buf[80];
       sprintf(buf, "%s: %d:%02d", name, remaining / 60, remaining % 60);
+      std::string result(buf);
+      return result;
+  - platform: template
+    id: usage_txt
+    lambda: |-
+      char buf[32];
+      sprintf(buf, "%.0fL (%0.1fLpm)", id(usage).state, id(flow_rate).state);
       std::string result(buf);
       return result;
 
