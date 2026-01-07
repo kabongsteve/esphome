@@ -393,7 +393,7 @@ sensor:
     filters:
       - exponential_moving_average:
           alpha: 0.2
-          send_every: 10
+          send_every: 5
           send_first_at: 5
     update_interval: 0.1s
       

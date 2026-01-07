@@ -1,25 +1,23 @@
 substitutions:
-  # I2S Audio Config
-  i2s_bps_spk: 16bit
-  i2s_bps_mic: 16bit
-  i2s_sample_rate_spk: 44100
-  i2s_sample_rate_mic: 44100
-  i2s_use_apll: true
   dim_light: 80%
   full_light: 100%
 
 esphome:
-  name: coffee3
-  friendly_name: Coffee Machine
+  name: testc6
+  friendly_name: ESP32C6 Coffee Machine
   # on_boot:
   #   - light.control:
   #       id: backlight
   #       brightness: "80%"
+  # includes:
+  #   - img/hot8.h
 
 external_components:
   # shorthand
-  source: github://n-serrette/esphome_sd_card
-  
+#  source: github://n-serrette/esphome_sd_card
+  - source: github://jesserockz/esphome-components
+    components: [file] 
+
 esp32:
   variant: ESP32c6
   flash_size: 16Mb
@@ -86,12 +84,23 @@ display:
     dimensions:
       height: 466
       width: 466
+      offset_width: 6
     auto_clear_enabled: false
     update_interval: never
 
-# touchscreen:
-#   - platform: ft63x6
+touchscreen:
+  - platform: ft63x6
+    id: touch_id
+    address: 0x38
 #     interrupt_pin: GPIO01
+    on_touch:
+      - lambda: |-
+            ESP_LOGI("cal", "x=%d, y=%d, x_raw=%d, y_raw=%0d",
+                touch.x,
+                touch.y,
+                touch.x_raw,
+                touch.y_raw
+                );
 
 light:
   - platform: monochromatic
@@ -122,14 +131,6 @@ web_server:
   css_include: "./v2/webserver-v1.min.js"
   version: 2
 
-i2s_audio:
-  - id: i2s_sound
-    i2s_lrclk_pin:
-      number: GPIO22
-    i2s_bclk_pin:
-      number: GPIO21
-    i2s_mclk_pin: GPIO19
-
 # # ADC and Mic Configuration
 # audio_adc:
 #   - platform: es7210
@@ -151,8 +152,16 @@ i2s_audio:
 audio_dac:
   - platform: es8311
     id: dac_bus_a
-    bits_per_sample: $i2s_bps_spk
-    sample_rate: $i2s_sample_rate_spk
+    bits_per_sample: 16bit
+    sample_rate: 16000
+    i2c_id: i2c_bus
+    use_mclk: true
+
+i2s_audio:
+  - id: i2s_sound
+    i2s_mclk_pin: GPIO19
+    i2s_bclk_pin: GPIO21
+    i2s_lrclk_pin: GPIO22
 
 speaker:
   - platform: i2s_audio
@@ -161,31 +170,61 @@ speaker:
     i2s_dout_pin: GPIO20
     dac_type: external
     timeout: never
-    buffer_duration: 100ms
+    buffer_duration: 1000ms
     audio_dac: dac_bus_a
-    sample_rate: $i2s_sample_rate_spk
-    bits_per_sample: $i2s_bps_spk
-    use_apll: $i2s_use_apll
-    channel: stereo
+    sample_rate: 16000
+    bits_per_sample: 16bit
+    bits_per_channel: 16bit
+    use_apll: true
+    channel: mono
 
+file:
+  - id: too_hot
+    file: img\hot.wav
+
+binary_sensor:
+  - platform: touchscreen
+    name: power_btn
+    x_min: 200
+    x_max: 266
+    y_min: 360
+    y_max: 460
+    on_press:
+      - logger.log: "Pressed"
+      - speaker.volume_set: 80%
+      - lambda: id(speaker_a).play(id(too_hot), sizeof(id(too_hot)));
+      - logger.log: "Pressed 2"
+      # - if:
+      #     condition:
+      #       switch.is_off: machine
+      #     then:
+      #       - switch.turn_on: machine
 
 font:
+  - file: "gfonts://Roboto"
+    id: numbers_small
+    size: 32
+    bpp: 4
+    glyphs: [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
   - file: "gfonts://Roboto"
     id: roboto48
     size: 80
     bpp: 4
     glyphsets: GF_Latin_Core
+    ignore_missing_glyphs: true
   - file: "gfonts://Roboto"
     id: roboto64
     size: 128
     bpp: 4
     glyphsets: GF_Latin_Core
+    ignore_missing_glyphs: true
   - file: 
       type: gfonts
       family: Science Gothic
     id: roboto80
     size: 160
     bpp: 4
+    ignore_missing_glyphs: true
   - file: "fonts/materialdesignicons-webfont.ttf"
     id: icons_font
     size: 100
@@ -195,15 +234,21 @@ font:
 
 
 lvgl:
+  touchscreens:
+    touchscreen_id: touch_id
+  disp_bg_color: black
   pages:
     - id: clock_page
       width: 100%
       height: 100%
-      pad_all: 4
+      pad_all: 0
       bg_color: Black
+      border_width: 0  
+      scrollbar_mode: "OFF"
+      text_font: numbers_small
       widgets:
           # Outer Clock Container
-          - obj:
+          - container:
               height: 100%
               width: 100%
               align: center
@@ -283,9 +328,16 @@ lvgl:
                   text_color: red
                   bg_color: Black
                   text: "\U000F0425"
+
     - id: thermometer_page
       width: 100%
+      height: 100%
+      pad_all: 0
       bg_color: Black
+      border_width: 0  
+      scrollbar_mode: "OFF"
+      text_font: numbers_small
+
       widgets:
           - obj:
               height: 100%
@@ -317,7 +369,7 @@ lvgl:
                       length: 10
                       color: Grey
                       major:
-                        label_gap: 15
+                        label_gap: 30
                         length: 15
                         stride: 5
                         width: 1
@@ -352,6 +404,7 @@ lvgl:
                   text_font: roboto80
                   bg_color: Black
                   text_color: blue
+                  text: "??"
 
 time:
   - platform: homeassistant
@@ -364,20 +417,6 @@ time:
     on_time_sync:
       then:
           - script.execute: set_time
-
-# binary_sensor:
-#   - platform: touchscreen
-#     name: power_btn
-#     x_min: 100
-#     x_max: 140
-#     y_min: 180
-#     y_max: 220
-#     on_press:
-#       - if:
-#           condition:
-#             switch.is_off: machine
-#           then:
-#             - switch.turn_on: machine
 
 
 globals:
@@ -418,14 +457,14 @@ sensor:
                 id: backlight
                 brightness: ${dim_light}
   - platform: adc
-    pin: GPIO01
+    pin: GPIO00
     id: temp_sensor
     name: Temp Sensor
     attenuation: 12db
     samples: 10
     sampling_mode: avg
     internal: true
-    update_interval: 0.1s
+    update_interval: 5.1s
     filters:
       - clamp:
           min_value: 0.1
@@ -450,7 +489,7 @@ sensor:
           alpha: 0.2
           send_every: 5
           send_first_at: 5
-    update_interval: 0.1s
+    update_interval: 5.1s
       
     on_value:
       - lvgl.indicator.update:
@@ -487,8 +526,10 @@ sensor:
           }
 
 switch:
-  - platform: homeassistant
-    entity_id: switch.bezzera
+  - platform: gpio
+    pin: 
+      number: GPIO15
+      inverted: true
     id: machine
     on_turn_off:
       - lvgl.page.show: clock_page
@@ -506,6 +547,15 @@ switch:
       pca9554: gpio_expand
       number: 7
     restore_mode: RESTORE_DEFAULT_ON
+  - platform: lvgl
+    widget: power
+    name: Power Button
+    on_turn_on: 
+      then:
+        switch.turn_on: machine
+    on_turn_off: 
+      then:
+        switch.turn_off: machine
 
 script:
   - id: dim_delay

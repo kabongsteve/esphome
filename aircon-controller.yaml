@@ -3,6 +3,23 @@ esphome:
   friendly_name: Aircon Controller
   includes:
     - <sstream>
+  on_boot:
+    - priority: -150
+      then:
+        - text_sensor.template.publish:
+            id: full_reset
+            state: !lambda |-
+              char buf[80];
+              id(debug_id).update();
+              id(debug_id).dump_config();
+              // const char *const RESET_REASONS[] = {
+              //   "Unknown", "Power-on", "External Pin", "Software (esp_restart)", "Exception/Panic",
+              //   "Interrupt Watchdog", "Task Watchdog", "Other Watchdog", "Deep Sleep", 
+              //   "Brownout", "SDIO", "USB Peripheral", "JTAG", "eFuse Error", "Power Glitch", "CPU Lockup"
+              // };
+              auto time = id(homeassistant_time).now();
+              sprintf(buf, " %04d-%02d-%02d %02d:%02d:%02d:  %s", time.year, time.month, time.day_of_month, time.hour, time.minute, time.second, id(reset_reason).state.c_str());
+              return std::string(buf);
 
 esp32:
   board: esp32dev
@@ -61,6 +78,7 @@ web_server:
   log: true
 
 debug:
+  id: debug_id
 
 number:
   - platform: template
@@ -138,7 +156,11 @@ sensor:
 text_sensor:
   - platform: debug
     reset_reason:
-      name: "Reset Reason"
+      id: reset_reason
+  - platform: template
+    name: "Reset Comment"
+    id: full_reset
+    update_interval: never
 
 climate:
   - platform: thermostat
