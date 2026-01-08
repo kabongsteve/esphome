@@ -278,6 +278,7 @@ lvgl:
         radius: 0
         pad_all: 0
         border_width: 0
+        scrollbar_mode: "OFF"
         widgets:
           - image:
               id: water_img
@@ -285,9 +286,7 @@ lvgl:
               mode: virtual
               bg_image_opa: TRANSP
               x: 0
-              y: 0
-              offset_x: 0
-              offset_y: -240
+              y: 240
               pad_all: 0
               border_width: 0
           - obj:
@@ -344,6 +343,8 @@ lvgl:
                       - "Hose"
                       - "Front"
                       - "Fence"
+                      - "Garden"
+                      - "Garden (M)"
                       - "Fence (M)"
                       - "Front (M)"
                       - "Hose (M)"
@@ -537,6 +538,15 @@ lvgl:
               text: ""
 
 
+globals:
+  - id: history
+    type: std::deque<std::string>
+    restore_value: no
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
 number:
 
   - platform: template
@@ -545,9 +555,9 @@ number:
     unit_of_measurement: "lt"
     optimistic: true
     min_value: 1
-    max_value: 3000
-    step: 1
-    initial_value: 2400
+    max_value: 5000
+    step: 10
+    initial_value: 3150
     restore_value: true
 
   - platform: template
@@ -556,9 +566,9 @@ number:
     unit_of_measurement: "lt"
     optimistic: true
     min_value: 0
-    max_value: 2400
+    max_value: 500
     step: 5
-    initial_value: 50
+    initial_value: 80
     restore_value: true
 
   - platform: template
@@ -657,19 +667,23 @@ sensor:
     name: "TankLevel"
     state_class: "measurement"
     unit_of_measurement: "lt"
-    accuracy_decimals: 1
+    accuracy_decimals: 0
     filters:
       - lambda: |-
-          double depth = x;
-          if (isnan(depth))
+          double depth = 162.0 - (x * 100.0);
+          if (isnan(x) || depth < 0)
             return 0.0;
-          auto empty = 1658.0; // mm
+
           auto unit = 15.0;  // lt/cm
-          depth *= 1000;
-          if (depth > empty)
-            depth = empty;
-          return (double)((int)((empty - depth) * unit / 100) * 10);
-      - filter_out: NAN
+          double volume = depth * unit;
+          if (depth > 620)
+            volume += 960;
+          else if (depth > 220)
+          {
+            volume += (depth - 220) * 25;
+          }
+
+          return (double)((int)(volume / 10) * 10);
 
   - platform: copy
     id: level_percent
@@ -677,7 +691,7 @@ sensor:
     name: "TankLevel Percent"
     state_class: "measurement"
     unit_of_measurement: "%"
-    accuracy_decimals: 1
+    accuracy_decimals: 0
     filters:
       - lambda: return (x * 100) / id(capacity).state;
 
@@ -689,7 +703,10 @@ sensor:
     unit_of_measurement: "px"
     internal: true
     filters:
-      - lambda: return (int)x * 4.8 + 12;
+      - lambda: |-
+          if (isnan(x))
+            return 470;
+          return 470 - ((int)x * 4.7);
       - round: 0
 
   - platform: wifi_signal # Reports the WiFi signal strength/RSSI in dB
@@ -958,7 +975,7 @@ select:
                         then:
                             - sprinkler.start_single_valve:
                                 id: sprinklers
-                                valve_number: !lambda 'return id(source).active_index().value() + 4;'
+                                valve_number: !lambda 'return 7 - id(source).active_index().value();'
 
                                 run_duration: !lambda 'return (int)(id(run_duration).state * 60);'
                         else:
@@ -992,9 +1009,19 @@ sprinkler:
       name: "Sprinklers"
       id: main_switch
       on_turn_off:
+        - delay: 200ms
         - select.set_index: 
             id: mode
             index: 0
+        - lambda: |-
+            if (!id(history).empty()) {
+              char buf[16];
+              sprintf(buf, ": %.0f L", id(usage).state);
+              id(history).at(0).append(buf);
+              if (id(history).size() > 10)
+                id(history).pop_back();
+            }
+        - component.update: historical_txt
         - lvgl.label.update:
             id: last_usage_lbl
             text: !lambda return id(usage_txt).state;
@@ -1017,6 +1044,14 @@ sprinkler:
         - select.set_index:
             id: mode
             index: 3
+        - lambda: |-
+            char buf[80];
+            id(homeassistant_time).now().strftime(buf, 80, "%a %b %d %H:%M: ");
+            auto result = std::string(buf) + id(valve_name).state + " for " + id(time_remaining).state;
+            // sprintf(buf, "for %d:%02d", id(sprinklers).active_valve().run_duration() / 60. id(sprinklers).active_valve() % 60);
+            // result += buf;
+            id(history).push_front(result);
+        - component.update: historical_txt
     valve_overlap: 1s
     pump_start_pump_delay: 1s
     #pump_stop_valve_delay: 1s
@@ -1033,6 +1068,14 @@ sprinkler:
         valve_switch_id: fence
         pump_switch_id: pump
         run_duration: 900s
+      - valve_switch: "Garden"
+        valve_switch_id: garden
+        pump_switch_id: pump
+        run_duration: 900s
+      - valve_switch: "Garden M"
+        valve_switch_id: garden
+        pump_switch_id: mains
+        run_duration: 900s
       - valve_switch: "Fence M"
         valve_switch_id: fence
         pump_switch_id: mains
@@ -1043,14 +1086,6 @@ sprinkler:
         run_duration: 900s
       - valve_switch: "Hose M"
         valve_switch_id: hose
-        pump_switch_id: mains
-        run_duration: 900s
-      - valve_switch: "Garden"
-        valve_switch_id: garden
-        pump_switch_id: pump
-        run_duration: 900s
-      - valve_switch: "Garden M"
-        valve_switch_id: garden
         pump_switch_id: mains
         run_duration: 900s
 
@@ -1067,7 +1102,7 @@ interval:
             args: [ 'id(volume).state' ]
       - lvgl.image.update:
           id: water_img
-          offset_y: !lambda 'return -(int)(id(level_image).state);'
+          y: !lambda 'return (int)(id(level_image).state);'
   - interval: 1s
     startup_delay: 5s
     then:
@@ -1132,8 +1167,21 @@ text_sensor:
     id: usage_txt
     lambda: |-
       char buf[32];
-      sprintf(buf, "%.0fL (%0.1fLpm)", id(usage).state, id(flow_rate).state);
+      auto rate = id(flow_rate).state;
+      if (isnan(rate))
+        rate = 0;
+      sprintf(buf, "%.0fL (%0.1fLpm)", id(usage).state, rate );
       std::string result(buf);
+      return result;
+  - platform: template
+    id: historical_txt
+    name: Historical Usage
+    lambda: |-
+      std::string result;
+      for (auto use : id(history)) {
+        result.append(use);
+        result.append("\n");
+      }
       return result;
 
 light:

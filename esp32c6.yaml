@@ -149,38 +149,38 @@ web_server:
 #     pdm: False
 
 # DAC and Speaker Configuration
-audio_dac:
-  - platform: es8311
-    id: dac_bus_a
-    bits_per_sample: 16bit
-    sample_rate: 16000
-    i2c_id: i2c_bus
-    use_mclk: true
+# audio_dac:
+#   - platform: es8311
+#     id: dac_bus_a
+#     bits_per_sample: 16bit
+#     sample_rate: 16000
+#     i2c_id: i2c_bus
+#     use_mclk: true
 
-i2s_audio:
-  - id: i2s_sound
-    i2s_mclk_pin: GPIO19
-    i2s_bclk_pin: GPIO21
-    i2s_lrclk_pin: GPIO22
+# i2s_audio:
+#   - id: i2s_sound
+#     i2s_mclk_pin: GPIO19
+#     i2s_bclk_pin: GPIO21
+#     i2s_lrclk_pin: GPIO22
 
-speaker:
-  - platform: i2s_audio
-    i2s_audio_id: i2s_sound
-    id: speaker_a
-    i2s_dout_pin: GPIO20
-    dac_type: external
-    timeout: never
-    buffer_duration: 1000ms
-    audio_dac: dac_bus_a
-    sample_rate: 16000
-    bits_per_sample: 16bit
-    bits_per_channel: 16bit
-    use_apll: true
-    channel: mono
+# speaker:
+#   - platform: i2s_audio
+#     i2s_audio_id: i2s_sound
+#     id: speaker_a
+#     i2s_dout_pin: GPIO20
+#     dac_type: external
+#     timeout: never
+#     buffer_duration: 1000ms
+#     audio_dac: dac_bus_a
+#     sample_rate: 16000
+#     bits_per_sample: 16bit
+#     bits_per_channel: 16bit
+#     use_apll: true
+#     channel: mono
 
-file:
-  - id: too_hot
-    file: img\hot.wav
+# file:
+#   - id: too_hot
+#     file: img\hot.wav
 
 binary_sensor:
   - platform: touchscreen
@@ -191,14 +191,15 @@ binary_sensor:
     y_max: 460
     on_press:
       - logger.log: "Pressed"
-      - speaker.volume_set: 80%
-      - lambda: id(speaker_a).play(id(too_hot), sizeof(id(too_hot)));
+      # - speaker.volume_set: 80%
+      # - lambda: id(speaker_a).play(id(too_hot), sizeof(id(too_hot)));
       - logger.log: "Pressed 2"
       # - if:
       #     condition:
       #       switch.is_off: machine
       #     then:
       #       - switch.turn_on: machine
+
 
 font:
   - file: "gfonts://Roboto"
@@ -437,7 +438,133 @@ globals:
     restore_value: no
     initial_value: '0'
 
+esp32_ble_tracker:
+
+ble_client:
+  - mac_address: "A4:C1:38:08:B0:0E"
+    id: inkbird
+
+
 sensor:
+  # - platform: ble_client
+  #   type: characteristic
+  #   ble_client_id: inkbird
+  #   name: Inkbird Internal
+  #   id: inkbird_internal
+  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
+  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
+  #   unit_of_measurement: '°C'
+  #   lambda: |-
+  #     // Display the hex string for debugging.
+  #     std::vector<uint8_t> data = x;
+  #     std::string hex_string = "";
+  #     for (size_t i = 0; i < x.size(); ++i) {
+  #       char hex_buffer[3];
+  #       snprintf(hex_buffer, sizeof(hex_buffer), "%02X", data[i]);
+  #       hex_string += hex_buffer;
+  #       if (i % 2 == 1 && i != data.size() - 1) {
+  #         hex_string += " ";  // Insert a space every two bytes
+  #       }
+  #     }
+  #     uint8_t arr_size = x.size();
+  #     ESP_LOGW("LOG_TAG", "INKBIRD Hexadecimal string: %s", hex_string.c_str());
+  #     uint8_t value = x[1];
+  #     return value;
+  #   device_class: "temperature"
+  # - platform: ble_client
+  #   type: characteristic
+  #   ble_client_id: inkbird
+  #   name: Inkbird Ambient
+  #   id: inkbird_ambient
+  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
+  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
+  #   unit_of_measurement: '°C'
+  #   lambda: |-
+  #       uint8_t value = x[3];
+  #       return value;
+  #   filters:
+  #     - filter_out: 0.0
+  #   device_class: "temperature"
+  # - platform: ble_client
+  #   type: characteristic
+  #   ble_client_id: inkbird
+  #   name: Inkbird Flags
+  #   id: inkbird_flags
+  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
+  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
+  #   lambda: |-
+  #       uint8_t value = x[2];
+  #       return value;
+  # # This almost certainly relates to probe battery, possibly without the most significant bit?
+  # - platform: ble_client
+  #   type: characteristic
+  #   ble_client_id: inkbird
+  #   name: Inkbird Unknown 4
+  #   id: inkbird_unknown_4
+  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
+  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
+  #   lambda: |-
+  #       uint8_t value = x[4];
+  #       return value;
+  #   device_class: voltage
+  # - platform: ble_client
+  #   type: characteristic
+  #   ble_client_id: inkbird
+  #   name: Inkbird Probe Battery
+  #   id: inkbird_probe_battery
+  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
+  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
+  #   lambda: |-
+  #       uint8_t value = (x[4] & 0x7F);
+  #       return value;
+  #   unit_of_measurement: '%'
+  #   device_class: battery
+  # - platform: ble_client
+  #   type: characteristic
+  #   ble_client_id: inkbird
+  #   name: Inkbird Unknown 5
+  #   id: inkbird_unknown_5
+  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
+  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
+  #   lambda: |-
+  #       uint8_t value = x[5];
+  #       return value;
+  #   device_class: voltage
+  # - platform: ble_client
+  #   type: characteristic
+  #   ble_client_id: inkbird
+  #   name: Inkbird Case Battery
+  #   id: inkbird_case_battery
+  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
+  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
+  #   lambda: |-
+  #       uint8_t value = x[5] >> 1;
+  #       return value;
+  #   unit_of_measurement: '%'
+  #   device_class: battery
+  # - platform: ble_client
+  #   type: characteristic
+  #   ble_client_id: inkbird
+  #   name: Inkbird Case Charging
+  #   icon: mdi:battery-charging
+  #   id: inkbird_case_charging
+  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
+  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
+  #   lambda: |-
+  #       bool value = (x[5] & 0x01);
+  #       return value;
+  # - platform: ble_client
+  #   type: characteristic
+  #   ble_client_id: inkbird
+  #   name: Inkbird Probe Charging
+  #   icon: mdi:battery-charging
+  #   id: inkbird_probe_charging
+  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
+  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
+  #   lambda: |-
+  #       bool value = (x[2] >> 7);
+  #       return value;
+
   - platform: homeassistant
     id: kitchen_light
     entity_id: light.overhead_kitchen # Replace with the actual entity_id of your light in Home Assistant
@@ -556,6 +683,10 @@ switch:
     on_turn_off: 
       then:
         switch.turn_off: machine
+#switch:
+  - platform: ble_client
+    ble_client_id: inkbird
+    name: "Enable Inkbird INT-11P-B"
 
 script:
   - id: dim_delay
