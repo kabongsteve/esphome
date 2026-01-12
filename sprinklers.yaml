@@ -629,10 +629,11 @@ sensor:
     name: "Tank Sensor"
     internal: false
     filters:
-      - sliding_window_moving_average:
-          window_size: 60
-          send_every: 180
       - filter_out: NAN
+      - sliding_window_moving_average:
+          window_size: 20
+          send_every: 6
+      - lambda: return 1.6200 - x;
 
   - platform: pulse_meter
     pin: GPIO43
@@ -670,20 +671,26 @@ sensor:
     accuracy_decimals: 0
     filters:
       - lambda: |-
-          double depth = 162.0 - (x * 100.0);
+          double depth = (int)(x * 1000.0) / 10.0;
           if (isnan(x) || depth < 0)
             return 0.0;
 
-          auto unit = 15.0;  // lt/cm
+          auto unit = 14.3;  // lt/cm
           double volume = depth * unit;
-          if (depth > 620)
-            volume += 960;
-          else if (depth > 220)
-          {
-            volume += (depth - 220) * 25;
+          auto BL = 30, BM=65, BH=80;
+          if (depth > BH) {
+            volume += 960;  // Full Baldder
+          } else {
+            if (depth > BL) {
+              volume += (depth - BL) * 1.147 * 9.4;
+            }
+            if (depth > BM) {
+              volume += (depth - BM) * 2 * 18;
+            }
           }
 
-          return (double)((int)(volume / 10) * 10);
+          //return volume;
+          return (double)((int)(volume / 5) * 5);
 
   - platform: copy
     id: level_percent
@@ -1009,7 +1016,6 @@ sprinkler:
       name: "Sprinklers"
       id: main_switch
       on_turn_off:
-        - delay: 200ms
         - select.set_index: 
             id: mode
             index: 0

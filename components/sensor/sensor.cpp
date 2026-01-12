@@ -132,7 +132,8 @@ float Sensor::get_raw_state() const { return this->raw_state; }
 void Sensor::internal_send_state_to_frontend(float state) {
   this->set_has_state(true);
   this->state = state;
-  ESP_LOGI(TAG, "sensor.%s: %g %s", this->get_name().c_str(), state, this->get_unit_of_measurement_ref().c_str());
+  if (!this->is_internal())
+    ESP_LOGI(TAG, "%s: %g %s", this->get_name().c_str(), state, this->get_unit_of_measurement_ref().c_str());
   ESP_LOGD(TAG, "'%s': Sending state %.5f %s with %d decimals of accuracy", this->get_name().c_str(), state,
            this->get_unit_of_measurement_ref().c_str(), this->get_accuracy_decimals());
   this->callback_.call(state);
