@@ -36,6 +36,9 @@ spi:
       - GPIO05
       - GPIO06
       - GPIO07
+  - id: spi_b
+    clk_pin: GPIO17
+    miso_pin: GPIO09
 
 i2c:
   sda: GPIO18
@@ -48,9 +51,10 @@ pca9554:
   - id: gpio_expand
     address: 0x20
 
+
 # Enable logging
 logger:
-#  baud_rate: 115200
+  baud_rate: 0
   level: DEBUG
 
 # Enable Home Assistant API
@@ -191,14 +195,11 @@ binary_sensor:
     y_max: 460
     on_press:
       - logger.log: "Pressed"
-      # - speaker.volume_set: 80%
-      # - lambda: id(speaker_a).play(id(too_hot), sizeof(id(too_hot)));
-      - logger.log: "Pressed 2"
-      # - if:
-      #     condition:
-      #       switch.is_off: machine
-      #     then:
-      #       - switch.turn_on: machine
+      - if:
+          condition:
+            switch.is_off: machine
+          then:
+            - switch.turn_on: machine
 
 
 font:
@@ -438,133 +439,7 @@ globals:
     restore_value: no
     initial_value: '0'
 
-esp32_ble_tracker:
-
-ble_client:
-  - mac_address: "A4:C1:38:08:B0:0E"
-    id: inkbird
-
-
 sensor:
-  # - platform: ble_client
-  #   type: characteristic
-  #   ble_client_id: inkbird
-  #   name: Inkbird Internal
-  #   id: inkbird_internal
-  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
-  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
-  #   unit_of_measurement: '°C'
-  #   lambda: |-
-  #     // Display the hex string for debugging.
-  #     std::vector<uint8_t> data = x;
-  #     std::string hex_string = "";
-  #     for (size_t i = 0; i < x.size(); ++i) {
-  #       char hex_buffer[3];
-  #       snprintf(hex_buffer, sizeof(hex_buffer), "%02X", data[i]);
-  #       hex_string += hex_buffer;
-  #       if (i % 2 == 1 && i != data.size() - 1) {
-  #         hex_string += " ";  // Insert a space every two bytes
-  #       }
-  #     }
-  #     uint8_t arr_size = x.size();
-  #     ESP_LOGW("LOG_TAG", "INKBIRD Hexadecimal string: %s", hex_string.c_str());
-  #     uint8_t value = x[1];
-  #     return value;
-  #   device_class: "temperature"
-  # - platform: ble_client
-  #   type: characteristic
-  #   ble_client_id: inkbird
-  #   name: Inkbird Ambient
-  #   id: inkbird_ambient
-  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
-  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
-  #   unit_of_measurement: '°C'
-  #   lambda: |-
-  #       uint8_t value = x[3];
-  #       return value;
-  #   filters:
-  #     - filter_out: 0.0
-  #   device_class: "temperature"
-  # - platform: ble_client
-  #   type: characteristic
-  #   ble_client_id: inkbird
-  #   name: Inkbird Flags
-  #   id: inkbird_flags
-  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
-  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
-  #   lambda: |-
-  #       uint8_t value = x[2];
-  #       return value;
-  # # This almost certainly relates to probe battery, possibly without the most significant bit?
-  # - platform: ble_client
-  #   type: characteristic
-  #   ble_client_id: inkbird
-  #   name: Inkbird Unknown 4
-  #   id: inkbird_unknown_4
-  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
-  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
-  #   lambda: |-
-  #       uint8_t value = x[4];
-  #       return value;
-  #   device_class: voltage
-  # - platform: ble_client
-  #   type: characteristic
-  #   ble_client_id: inkbird
-  #   name: Inkbird Probe Battery
-  #   id: inkbird_probe_battery
-  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
-  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
-  #   lambda: |-
-  #       uint8_t value = (x[4] & 0x7F);
-  #       return value;
-  #   unit_of_measurement: '%'
-  #   device_class: battery
-  # - platform: ble_client
-  #   type: characteristic
-  #   ble_client_id: inkbird
-  #   name: Inkbird Unknown 5
-  #   id: inkbird_unknown_5
-  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
-  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
-  #   lambda: |-
-  #       uint8_t value = x[5];
-  #       return value;
-  #   device_class: voltage
-  # - platform: ble_client
-  #   type: characteristic
-  #   ble_client_id: inkbird
-  #   name: Inkbird Case Battery
-  #   id: inkbird_case_battery
-  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
-  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
-  #   lambda: |-
-  #       uint8_t value = x[5] >> 1;
-  #       return value;
-  #   unit_of_measurement: '%'
-  #   device_class: battery
-  # - platform: ble_client
-  #   type: characteristic
-  #   ble_client_id: inkbird
-  #   name: Inkbird Case Charging
-  #   icon: mdi:battery-charging
-  #   id: inkbird_case_charging
-  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
-  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
-  #   lambda: |-
-  #       bool value = (x[5] & 0x01);
-  #       return value;
-  # - platform: ble_client
-  #   type: characteristic
-  #   ble_client_id: inkbird
-  #   name: Inkbird Probe Charging
-  #   icon: mdi:battery-charging
-  #   id: inkbird_probe_charging
-  #   service_uuid: 0000fff0-0000-1000-8000-00805f9b34fb
-  #   characteristic_uuid: 0000fff1-0000-1000-8000-00805f9b34fb
-  #   lambda: |-
-  #       bool value = (x[2] >> 7);
-  #       return value;
-
   - platform: homeassistant
     id: kitchen_light
     entity_id: light.overhead_kitchen # Replace with the actual entity_id of your light in Home Assistant
@@ -583,41 +458,18 @@ sensor:
             - light.control:
                 id: backlight
                 brightness: ${dim_light}
-  - platform: adc
-    pin: GPIO00
+
+  - platform: max31855
     id: temp_sensor
-    name: Temp Sensor
-    attenuation: 12db
-    samples: 10
-    sampling_mode: avg
-    internal: true
-    update_interval: 5.1s
-    filters:
-      - clamp:
-          min_value: 0.1
-          max_value: 3.2
-          ignore_out_of_range: true
-  - platform: template
-    id: temperature
-    name: "Temperature"
-    unit_of_measurement: "°C"
-    lambda: |-
-      const float A = 5.024114421e-3;
-      const float B = -6.073293892e-4;
-      const float C = 70.71922576e-7;
-      const float KELVIN = 273.15;
-
-      float R = id(temp_sensor).state * 1000;
-
-      float result = 1 / (A + B*log(R) + C*pow(log(R), 3)) - KELVIN;
-      return result;
-    filters:
-      - exponential_moving_average:
-          alpha: 0.2
-          send_every: 5
-          send_first_at: 5
-    update_interval: 5.1s
-      
+    name: Temperature
+    cs_pin: GPIO16
+    spi_id: spi_b
+    update_interval: 0.5s
+    # filters:
+    #   - exponential_moving_average:
+    #       alpha: 0.2
+    #       send_every: 5
+    #       send_first_at: 5
     on_value:
       - lvgl.indicator.update:
           id: temp_arc
@@ -634,23 +486,27 @@ sensor:
       - lambda: |-
           int wholeDeg = int(floor(x));
           if (id(lastState) != wholeDeg) {
-            id(lastState) = wholeDeg;
             id(steadyState) = id(steadyCount);
             id(changeCount) += 1;
+            if (abs(wholeDeg - id(lastState)) > 2)
+              id(changeCount) += 2;
+            id(lastState) = wholeDeg;
 
           }
           else {
-            id(steadyState) -= 1;
+            if (id(steadyState) >= 0) {
+              id(steadyState) -= 1;
+            }
             id(changeCount) = 0;
           }
           if (id(steadyState) == 0) {
-            lvgl_lvglcomponent_id->show_page(clock_page->index, LV_SCR_LOAD_ANIM_NONE, 50);
+            lvgl_lvglcomponent_id->show_page(clock_page->index, LV_SCR_LOAD_ANIM_FADE_ON, 250);
+          }
+          if (id(changeCount) > 2 && id(machine).state) {
+            lvgl_lvglcomponent_id->show_page(thermometer_page->index, LV_SCR_LOAD_ANIM_FADE_ON, 250);
             id (dim_delay).execute();
           }
-          if (id(changeCount) > 2) {
-            lvgl_lvglcomponent_id->show_page(thermometer_page->index, LV_SCR_LOAD_ANIM_NONE, 50);
-            id (dim_delay).execute();
-          }
+
 
 switch:
   - platform: gpio
@@ -674,6 +530,12 @@ switch:
       pca9554: gpio_expand
       number: 7
     restore_mode: RESTORE_DEFAULT_ON
+  - platform: gpio
+    name: "Battery Enable"
+    pin:
+      pca9554: gpio_expand
+      number: 6
+    restore_mode: RESTORE_DEFAULT_OFF
   - platform: lvgl
     widget: power
     name: Power Button
@@ -683,10 +545,6 @@ switch:
     on_turn_off: 
       then:
         switch.turn_off: machine
-#switch:
-  - platform: ble_client
-    ble_client_id: inkbird
-    name: "Enable Inkbird INT-11P-B"
 
 script:
   - id: dim_delay
